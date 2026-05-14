@@ -13,12 +13,17 @@
     "format": "biome check --write .",
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
+    "test:int": "pnpm -r run test:int",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "dev": "pnpm -r --parallel run dev",
-    "build": "pnpm -r run build"
+    "build": "pnpm -r run build",
+    "migrate:dev": "pnpm -F @echo/db migrate:dev",
+    "migrate:generate": "drizzle-kit generate",
+    "migrate:check": "drizzle-kit check"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "drizzle-kit": "^0.31.10",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   }
