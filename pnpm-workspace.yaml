@@ -6,4 +6,13 @@ packages:
 # pnpm 11 blocks postinstall scripts unless explicitly trusted.
 # Audit what each package's postinstall does before adding it here.
 allowBuilds:
+  # Just prints sponsorship banner.
   "@nestjs/core": true
+  # esbuild's postinstall fetches the platform-specific binary it needs to run.
+  # Required by drizzle-kit (config loader) and tsx (TS transpiler).
+  esbuild: true
+  # protobufjs precompiles its parser; pulled in transitively by testcontainers.
+  protobufjs: true
+  # ssh2 + cpu-features are native bindings used by testcontainers' SSH transport.
+  ssh2: true
+  cpu-features: true

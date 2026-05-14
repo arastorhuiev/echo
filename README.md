@@ -58,8 +58,17 @@ Prerequisites: Node 24 (use `nvm use` to pick up `.nvmrc`), pnpm 11 (`corepack e
 # Install workspace deps
 pnpm install
 
-# Lint, typecheck, and run tests
+# Lint, typecheck, and run unit tests (default loop)
 pnpm check
+
+# Integration tests (Testcontainers — needs Docker running)
+pnpm test:int
+
+# Database migrations (against a running local postgres)
+export DATABASE_URL=postgres://echo:changeme@localhost:5432/echo
+pnpm migrate:generate    # write a new migration file from the schema
+pnpm migrate:dev         # apply pending migrations
+pnpm migrate:check       # verify the migrations folder matches the schema
 
 # Build a specific app
 pnpm -F @echo/api build
