@@ -1,0 +1,44 @@
+# VCS / metadata
+**/.git
+**/.github
+.gitattributes
+
+# Project tooling that shouldn't ship in the image
+**/.omc
+**/.claude
+**/.vscode
+**/docs
+
+# Secrets — never ship into images
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dev-only artifacts
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/.pnpm-store
+**/.vitest-cache
+**/.tsbuildinfo
+**/*.log
+
+# Docker meta — these aren't needed inside the build context
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+Caddyfile
+
+# Markdown and other docs (not needed for a runtime image)
+**/*.md
+README.md
+
+# OS junk
+**/.DS_Store
+**/Thumbs.db
+
+# Editor swap files
+**/*.swp
+**/*~

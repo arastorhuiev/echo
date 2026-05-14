@@ -2,3 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
   - "services/*"
+
+# pnpm 11 blocks postinstall scripts unless explicitly trusted.
+# Audit what each package's postinstall does before adding it here.
+allowBuilds:
+  "@nestjs/core": true

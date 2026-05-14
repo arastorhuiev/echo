@@ -1,0 +1,36 @@
+# Caddyfile — production reverse proxy with TLS.
+#
+# This file is NOT used by the local docker-compose.yml. It's a reference
+# for P11 (deployment), which is currently DEFERRED — see
+# docs/AGENT_PLAN.md and docs/adr/0011-deployment-target.md.
+#
+# When P11 is activated:
+# - replace `api.echo.example` with the real domain
+# - set the admin email below
+# - mount this file into a Caddy container fronting `api:3000`
+
+{
+	email admin@example.com
+}
+
+api.echo.example {
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "interest-cohort=()"
+	}
+
+	# Per-IP rate limit lives at the edge here in production
+	# (in addition to @nestjs/throttler inside the API).
+	# Caddy's built-in rate limiter ships in a community module;
+	# wire it during P11 when the actual traffic shape is known.
+
+	reverse_proxy api:3000 {
+		health_uri /api/health/live
+		health_interval 10s
+		health_timeout 5s
+	}
+}
