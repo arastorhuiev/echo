@@ -18,6 +18,8 @@ This directory contains every load-bearing decision made for **echo**, in the st
 | 0010 | [Rate limiting without auth](./0010-rate-limiting-without-auth.md)                             | Accepted |
 | 0011 | [Deployment target — Hetzner CCX](./0011-deployment-target.md)                                 | Accepted |
 | 0012 | [No auth or payments in Phase 1; schema reservations](./0012-no-auth-no-payments-phase1.md)    | Accepted |
+| 0013 | [Code organization conventions](./0013-code-organization.md)                                   | Accepted |
+| 0014 | [`.js` suffixes in TypeScript imports for NodeNext ESM](./0014-js-suffixes-in-ts-imports.md)   | Accepted |
 
 ## Format
 

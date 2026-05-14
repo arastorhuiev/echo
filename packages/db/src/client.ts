@@ -22,6 +22,13 @@ export function createDbClient(databaseUrl: string, options: CreateDbClientOptio
     db,
     sql,
     close: (): Promise<void> => sql.end({ timeout: 5 }),
+    /**
+     * Lightweight connectivity check (`select 1`). Throws if Postgres is
+     * unreachable. Used by health checks and CI smoke tests.
+     */
+    async ping(): Promise<void> {
+      await sql`select 1`
+    },
   }
 }
 

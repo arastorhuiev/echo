@@ -27,6 +27,8 @@ For the human reviewing:
 - **Validation**: Every phase ends with `pnpm check` (lint + typecheck + tests) and `docker compose up -d --build && curl <relevant endpoint>` where applicable.
 - **No phase is "done" without a passing CI run.**
 - **No code outside the scope listed**. If a task seems necessary that isn't in the phase's task list, ask before adding — it usually belongs in a later phase.
+- **Code organisation** — every new feature lives in its own folder under `src/<feature>/`, with module/controller/service/types/tests co-located. Tests use `*.test.ts` (unit) or `*.int.test.ts` (integration), placed next to the code they exercise. Shared types are inline by default; promote to `*.types.ts` only when 2+ files in the same folder need them. See [ADR-0013](./adr/0013-code-organization.md).
+- **Import paths** — intra-package imports use the `@/*` alias (and `@test/*` for shared test helpers). Cross-package imports use workspace names (`@echo/db`). Relative `.js` suffixes are required for ESM packages — see [ADR-0014](./adr/0014-js-suffixes-in-ts-imports.md).
 
 ## Phase status legend
 

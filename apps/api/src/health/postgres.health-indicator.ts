@@ -11,8 +11,7 @@ export class PostgresHealthIndicator extends HealthIndicator {
 
   async ping(key: string): Promise<HealthIndicatorResult> {
     try {
-      // postgres-js tagged template — runs `select 1` against the pool
-      await this.dbClient.sql`select 1`
+      await this.dbClient.ping()
       return this.getStatus(key, true)
     } catch (err) {
       throw new HealthCheckError(
