@@ -45,9 +45,11 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: "3000"
       DATABASE_URL: ${DATABASE_URL:-postgres://echo:changeme@postgres:5432/echo}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      OTEL_SERVICE_NAME: echo-api
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,27 +65,29 @@ services:
       retries: 5
       start_period: 15s
 
-  # ─────────────────────────────────────────────────────────────
-  # Commented out for P1 — activated by later phases.
-  # ─────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: worker
+    container_name: echo-worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: ${DATABASE_URL:-postgres://echo:changeme@postgres:5432/echo}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      OTEL_SERVICE_NAME: echo-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
-  # worker — uncomment when P4 wires BullMQ and apps/worker exists.
-  # worker:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #     args:
-  #       APP: worker
-  #   container_name: echo-worker
-  #   restart: unless-stopped
-  #   environment:
-  #     NODE_ENV: ${NODE_ENV:-development}
-  #     APP_ROLE: worker
-  #     DATABASE_URL: ${DATABASE_URL:-postgres://echo:changeme@postgres:5432/echo}
-  #     REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-  #   depends_on:
-  #     postgres: { condition: service_healthy }
-  #     redis: { condition: service_healthy }
+  # ─────────────────────────────────────────────────────────────
+  # Commented out for now — activated by later phases.
+  # ─────────────────────────────────────────────────────────────
 
   # osint-py — uncomment when P7 lands the Sherlock sidecar.
   # osint-py:

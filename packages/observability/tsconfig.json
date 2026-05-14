@@ -8,6 +8,10 @@
     "noEmit": false,
     "declaration": true,
     "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
     "paths": {
       "@/*": ["./src/*"]
     }

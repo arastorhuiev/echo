@@ -3,10 +3,15 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
     "outDir": "dist",
     "rootDir": "src",
     "noEmit": false,
-    "declaration": true,
+    "declaration": false,
     "sourceMap": true,
     "paths": {
       "@/*": ["./src/*"]

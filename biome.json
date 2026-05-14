@@ -39,6 +39,9 @@
       "semicolons": "asNeeded",
       "trailingCommas": "all",
       "arrowParentheses": "always"
+    },
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
     }
   },
   "json": {
@@ -53,6 +56,21 @@
         "rules": {
           "suspicious": {
             "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/api/src/**",
+        "apps/worker/src/**",
+        "packages/config/src/**",
+        "packages/observability/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
           }
         }
       }
