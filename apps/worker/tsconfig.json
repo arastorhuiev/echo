@@ -3,16 +3,20 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
     "outDir": "dist",
     "rootDir": "src",
     "noEmit": false,
-    "declaration": true,
+    "declaration": false,
     "sourceMap": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@test/*": ["./test/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "src/**/*.test.ts", "src/**/*.int.test.ts"]
+  "exclude": ["dist", "node_modules"]
 }

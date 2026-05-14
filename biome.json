@@ -9,12 +9,12 @@
     "ignoreUnknown": true,
     "includes": [
       "**",
-      "!dist",
-      "!build",
-      "!coverage",
-      "!node_modules",
-      "!.pnpm-store",
-      "!.nvm",
+      "!**/dist",
+      "!**/build",
+      "!**/coverage",
+      "!**/node_modules",
+      "!**/.pnpm-store",
+      "!**/.nvm",
       "!.omc/state",
       "!.omc/sessions",
       "!packages/*/migrations",
@@ -39,6 +39,9 @@
       "semicolons": "asNeeded",
       "trailingCommas": "all",
       "arrowParentheses": "always"
+    },
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
     }
   },
   "json": {
@@ -53,6 +56,21 @@
         "rules": {
           "suspicious": {
             "noConsole": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/api/src/**",
+        "apps/worker/src/**",
+        "packages/config/src/**",
+        "packages/observability/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
           }
         }
       }

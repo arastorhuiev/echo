@@ -77,12 +77,23 @@ pnpm -F @echo/api build
 cp .env.example .env   # only needed for non-default values
 docker compose up -d --build
 
-# Verify the API is alive
+# Verify the API is alive (liveness — process is responsive)
 curl http://localhost:3000/api/health/live
 # → {"status":"live"}
 
-# Tail logs
+# Verify readiness (postgres + redis + sidecar reachable)
+curl http://localhost:3000/api/health/ready
+
+# OpenAPI document and Swagger UI
+curl http://localhost:3000/api/openapi.json
+open http://localhost:3000/api/docs
+
+# Prometheus metrics
+curl http://localhost:3000/api/metrics
+
+# Tail logs (api or worker)
 docker compose logs -f api
+docker compose logs -f worker
 
 # Tear down (deletes the postgres + redis volumes)
 docker compose down -v

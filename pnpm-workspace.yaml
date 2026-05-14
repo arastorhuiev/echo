@@ -16,3 +16,5 @@ allowBuilds:
   # ssh2 + cpu-features are native bindings used by testcontainers' SSH transport.
   ssh2: true
   cpu-features: true
+  # @scarf/scarf is a telemetry tracker some packages bundle. We don't run it.
+  "@scarf/scarf": false

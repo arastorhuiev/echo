@@ -8,11 +8,14 @@
     "noEmit": false,
     "declaration": true,
     "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": false,
     "paths": {
-      "@/*": ["./src/*"],
-      "@test/*": ["./test/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "src/**/*.test.ts", "src/**/*.int.test.ts"]
+  "exclude": ["dist", "node_modules"]
 }

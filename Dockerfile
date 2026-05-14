@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Multi-stage Dockerfile for echo apps.
 # Build target chosen at build time via APP arg (api or worker).
-# Worker target won't be used until P3 lands apps/worker; the plumbing
-# is here so we don't change Dockerfile shape later.
 
 ARG NODE_VERSION=24
 
@@ -14,21 +12,27 @@ RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
 WORKDIR /app
 
 # ─────────────────────────────────────────────────────────────
-# deps + build — installs all deps, builds the chosen app
+# deps + build — installs all deps, builds the chosen app and
+# all its workspace dependencies (config, db, observability, contracts)
+# in topological order.
 # ─────────────────────────────────────────────────────────────
 FROM base AS builder
 ARG APP=api
 
-# Manifests first for layer caching
+# Manifests + workspace shape first, for layer caching.
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/${APP}/package.json apps/${APP}/
 COPY packages/ packages/
 
+# Workspace `prepare` hooks build dist/ for the @echo/* packages here,
+# so by the time apps/${APP} compiles, its workspace deps are ready.
 RUN pnpm install --frozen-lockfile
 
-# Now copy sources and build
+# Sources for the chosen app
 COPY apps/${APP}/ apps/${APP}/
-RUN pnpm -F "@echo/${APP}" build
+
+# `... ` (3 dots) = the app + every workspace package it transitively depends on.
+RUN pnpm --filter "@echo/${APP}..." run build
 
 # ─────────────────────────────────────────────────────────────
 # runtime — slim image with only what's needed to run
@@ -42,11 +46,10 @@ RUN apk add --no-cache tini wget
 
 WORKDIR /app
 
-# Copy node_modules and built artifacts (preserve ownership for the node user).
-# pnpm puts each workspace package's direct deps in apps/<app>/node_modules
-# as symlinks pointing into /app/node_modules/.pnpm/, so we must copy BOTH:
-# - the root /app/node_modules (the actual .pnpm content-addressable store)
-# - the per-app apps/<app>/node_modules (the symlink fan-out)
+# Copy node_modules + built workspace deps + the app itself.
+# pnpm symlink fan-out is preserved by copying both the root
+# /app/node_modules (.pnpm content store) and the per-app
+# apps/<app>/node_modules (the symlink view).
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/packages ./packages
 COPY --from=builder --chown=node:node /app/package.json /app/pnpm-workspace.yaml ./
