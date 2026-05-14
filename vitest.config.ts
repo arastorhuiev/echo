@@ -5,9 +5,17 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
-    include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts"],
-    // Integration tests have their own per-package config (`vitest.int.config.ts`)
-    // and run via `pnpm -r run test:int`. Default `pnpm test` is unit-only.
+    // ADR-0013: tests are co-located in src/ next to the code they exercise.
+    // The legacy `test/` location is also accepted for shared helpers /
+    // fixture-heavy suites. Default `pnpm test` is unit-only — integration
+    // tests carry the `.int.test.ts` suffix and run via per-package
+    // vitest.int.config.ts (see `pnpm test:int`).
+    include: [
+      "packages/*/src/**/*.test.ts",
+      "packages/*/test/**/*.test.ts",
+      "apps/*/src/**/*.test.ts",
+      "apps/*/test/**/*.test.ts",
+    ],
     exclude: ["**/node_modules/**", "**/dist/**", "**/*.int.test.ts"],
     reporters: process.env.CI ? ["default", "github-actions"] : ["default"],
   },

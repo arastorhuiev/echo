@@ -1,5 +1,6 @@
 import "@/instrumentation"
 import "reflect-metadata"
+import { applyMigrations } from "@echo/db"
 import { NestFactory } from "@nestjs/core"
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify"
 import { Logger } from "nestjs-pino"
@@ -7,6 +8,13 @@ import { AppModule } from "@/app.module"
 import { setupOpenApi } from "@/openapi"
 
 async function bootstrap(): Promise<void> {
+  // Apply pending migrations before the HTTP server starts. Idempotent —
+  // Drizzle tracks applied migrations in a metadata table. Failing here
+  // is a hard exit so the api never serves traffic against a stale schema.
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) throw new Error("DATABASE_URL is required at api boot")
+  await applyMigrations(databaseUrl)
+
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
     bufferLogs: true,
   })

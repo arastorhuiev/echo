@@ -1,3 +1,4 @@
+// TODO: extract to shared @echo/nest package later (also in apps/api).
 import type { AppConfigService } from "@echo/config"
 import { createDbClient, type DbClient } from "@echo/db/client"
 import { Global, Inject, Module, type OnApplicationShutdown } from "@nestjs/common"
