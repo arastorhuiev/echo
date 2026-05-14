@@ -18,3 +18,6 @@ allowBuilds:
   cpu-features: true
   # @scarf/scarf is a telemetry tracker some packages bundle. We don't run it.
   "@scarf/scarf": false
+  # msgpackr-extract is the native msgpack codec used by BullMQ for fast
+  # job (de)serialisation. The postinstall builds prebuilt binaries.
+  msgpackr-extract: true
