@@ -1,0 +1,180 @@
+# ─────────────────────────────────────────────────────────────
+# Secrets — never commit
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+**/credentials.json
+**/service-account*.json
+
+# ─────────────────────────────────────────────────────────────
+# Node / pnpm / npm / yarn
+# ─────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+.yarnrc.yml.local
+
+# Lockfiles: pnpm-lock.yaml is committed. Other PMs are not used.
+package-lock.json
+yarn.lock
+
+# ─────────────────────────────────────────────────────────────
+# TypeScript build artifacts
+# ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+*.tsbuildinfo
+.tsbuildinfo
+
+# ─────────────────────────────────────────────────────────────
+# NestJS
+# ─────────────────────────────────────────────────────────────
+.nest/
+
+# ─────────────────────────────────────────────────────────────
+# Drizzle
+# ─────────────────────────────────────────────────────────────
+# Generated migrations are committed; introspect output / meta-only artifacts are not
+drizzle/meta/_journal.json.bak
+drizzle/.snapshot.json
+
+# ─────────────────────────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────────────────────────
+logs/
+*.log
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ─────────────────────────────────────────────────────────────
+# Test / coverage
+# ─────────────────────────────────────────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+junit.xml
+playwright-report/
+test-results/
+.vitest/
+.vitest-cache/
+
+# ─────────────────────────────────────────────────────────────
+# Docker
+# ─────────────────────────────────────────────────────────────
+docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+
+# ─────────────────────────────────────────────────────────────
+# Python sidecar (services/*-svc/)
+# ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.python-version
+poetry.lock
+uv.lock
+
+# ─────────────────────────────────────────────────────────────
+# IDE / editors
+# ─────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json.example
+.idea/
+*.swp
+*.swo
+*~
+.history/
+*.code-workspace
+
+# ─────────────────────────────────────────────────────────────
+# OS
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ─────────────────────────────────────────────────────────────
+# Terraform / Hetzner provisioning
+# ─────────────────────────────────────────────────────────────
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ─────────────────────────────────────────────────────────────
+# OpenTelemetry / local observability
+# ─────────────────────────────────────────────────────────────
+otel-data/
+.tempo/
+.loki/
+
+# ─────────────────────────────────────────────────────────────
+# Bruno
+# ─────────────────────────────────────────────────────────────
+apis/bruno/.bruno/
+apis/bruno/environments/local.bru
+
+# ─────────────────────────────────────────────────────────────
+# OMC / agent tooling — keep config, ignore session noise
+# ─────────────────────────────────────────────────────────────
+.omc/state/
+.omc/sessions/
+.omc/logs/
+.omc/research/
+# Keep: .omc/plans/
+# Per-machine memory; not project documentation
+.omc/project-memory.json
+.omc/notepad.md
+
+# .claude/CLAUDE.md and .claude/settings.json are project-shared (commit)
+# .claude/settings.local.json is user-local (do not commit)
+.claude/settings.local.json
+.claude/CLAUDE.md.backup.*
+
+# ─────────────────────────────────────────────────────────────
+# Backup / scratch
+# ─────────────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.orig
+.scratch/
+.notes/
+TODO.local.md
+NOTES.local.md
