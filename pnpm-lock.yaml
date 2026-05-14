@@ -32,6 +32,9 @@ importers:
       '@echo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@echo/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@echo/queue':
         specifier: workspace:*
         version: link:../../packages/queue
@@ -93,9 +96,15 @@ importers:
       '@echo/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@echo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@echo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@echo/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@echo/queue':
         specifier: workspace:*
         version: link:../../packages/queue
@@ -114,6 +123,12 @@ importers:
       bullmq:
         specifier: ^5.76.8
         version: 5.76.8
+      drizzle-orm:
+        specifier: 1.0.0-rc.2
+        version: 1.0.0-rc.2(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3)
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
       nestjs-pino:
         specifier: ^4.6.1
         version: 4.6.1(@nestjs/common@11.1.20(reflect-metadata@0.2.2)(rxjs@7.8.2))(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2)
@@ -210,6 +225,28 @@ importers:
       tsc-alias:
         specifier: ^1.8.17
         version: 1.8.17
+
+  packages/providers:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.20(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@opentelemetry/api':
+        specifier: ^1.9.0
+        version: 1.9.1
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      tsc-alias:
+        specifier: ^1.8.17
+        version: 1.8.17
+      vitest:
+        specifier: ^4.1.6
+        version: 4.1.6(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(vite@8.0.12(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))
 
   packages/queue:
     dependencies:

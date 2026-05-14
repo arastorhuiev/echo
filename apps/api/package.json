@@ -13,6 +13,7 @@
     "@echo/config": "workspace:*",
     "@echo/db": "workspace:*",
     "@echo/observability": "workspace:*",
+    "@echo/providers": "workspace:*",
     "@echo/queue": "workspace:*",
     "@fastify/static": "^9.1.3",
     "@nestjs/bullmq": "^11.0.4",

@@ -11,13 +11,17 @@
   },
   "dependencies": {
     "@echo/config": "workspace:*",
+    "@echo/db": "workspace:*",
     "@echo/observability": "workspace:*",
+    "@echo/providers": "workspace:*",
     "@echo/queue": "workspace:*",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.0",
     "bullmq": "^5.76.8",
+    "drizzle-orm": "1.0.0-rc.2",
+    "ioredis": "^5.10.1",
     "nestjs-pino": "^4.6.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
