@@ -16,7 +16,9 @@
       "!.pnpm-store",
       "!.nvm",
       "!.omc/state",
-      "!.omc/sessions"
+      "!.omc/sessions",
+      "!packages/*/migrations",
+      "!**/_meta"
     ]
   },
   "formatter": {

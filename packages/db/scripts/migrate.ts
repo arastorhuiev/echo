@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   }
 
   const sql = postgres(url, { max: 1, onnotice: () => {} })
-  const db = drizzle(sql)
+  const db = drizzle({ client: sql })
 
   console.log(`Applying migrations from ${migrationsFolder}`)
   await migrate(db, { migrationsFolder })

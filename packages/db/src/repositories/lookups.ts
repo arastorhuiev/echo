@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm"
-import type { Db } from "../client.js"
-import type { Lookup } from "../schema/lookups.js"
-import { lookups } from "../schema/lookups.js"
+import type { Db } from "@/client.js"
+import type { Lookup } from "@/schema/lookups.js"
+import { lookups } from "@/schema/lookups.js"
 
 export interface CreateLookupInput {
   providerId: string

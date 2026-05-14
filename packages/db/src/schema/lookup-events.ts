@@ -1,5 +1,5 @@
 import { bigserial, index, integer, jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
-import { lookups } from "./lookups.js"
+import { lookups } from "@/schema/lookups.js"
 
 export const lookupEvents = pgTable(
   "lookup_events",

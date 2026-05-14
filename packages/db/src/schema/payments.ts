@@ -1,5 +1,5 @@
 import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-import { users } from "./users.js"
+import { users } from "@/schema/users.js"
 
 /**
  * Phase 1 reservation. Empty in production until Phase 3 (paywall) lands.

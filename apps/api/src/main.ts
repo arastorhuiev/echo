@@ -1,7 +1,7 @@
 import "reflect-metadata"
 import { NestFactory } from "@nestjs/core"
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify"
-import { AppModule } from "./app.module"
+import { AppModule } from "@/app.module"
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter())
@@ -13,7 +13,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error("Fatal: API bootstrap failed", err)
   process.exit(1)
 })
