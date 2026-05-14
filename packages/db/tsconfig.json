@@ -7,7 +7,10 @@
     "rootDir": ".",
     "noEmit": false,
     "declaration": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*", "test/**/*", "scripts/**/*", "vitest.int.config.ts"],
   "exclude": ["dist", "node_modules"]

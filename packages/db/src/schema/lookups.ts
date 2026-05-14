@@ -1,5 +1,5 @@
 import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
-import { users } from "./users.js"
+import { users } from "@/schema/users.js"
 
 export const lookupStatus = pgEnum("lookup_status", [
   "queued",

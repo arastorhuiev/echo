@@ -10,12 +10,13 @@ if (!databaseUrl) {
 
 export default defineConfig({
   dialect: "postgresql",
-  schema: "./packages/db/src/schema/*.ts",
+  // Single barrel entry — drizzle-kit walks transitive imports from here.
+  // Using a glob (`schema/*.ts`) double-counts cross-imported tables in 1.x.
+  schema: "./packages/db/src/schema/index.ts",
   out: "./packages/db/migrations",
   dbCredentials: {
     url: databaseUrl ?? "postgres://placeholder",
   },
   verbose: true,
   strict: true,
-  casing: "snake_case",
 })

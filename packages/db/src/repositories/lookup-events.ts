@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm"
-import type { Db } from "../client.js"
-import type { LookupEvent } from "../schema/lookup-events.js"
-import { lookupEvents } from "../schema/lookup-events.js"
+import type { Db } from "@/client.js"
+import type { LookupEvent } from "@/schema/lookup-events.js"
+import { lookupEvents } from "@/schema/lookup-events.js"
 
 export async function append(
   db: Db,

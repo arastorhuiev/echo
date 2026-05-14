@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm"
-import type { Db } from "../client.js"
-import type { BreakerState, ProviderRow } from "../schema/providers.js"
-import { providers } from "../schema/providers.js"
+import type { Db } from "@/client.js"
+import type { BreakerState, ProviderRow } from "@/schema/providers.js"
+import { providers } from "@/schema/providers.js"
 
 export type Outcome = "success" | "failure"
 

@@ -17,7 +17,7 @@
     "migrate:dev": "tsx scripts/migrate.ts"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "1.0.0-rc.2",
     "postgres": "^3.4.9"
   },
   "devDependencies": {

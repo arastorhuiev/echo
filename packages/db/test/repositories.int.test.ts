@@ -5,9 +5,8 @@ import { drizzle } from "drizzle-orm/postgres-js"
 import { migrate } from "drizzle-orm/postgres-js/migrator"
 import postgres from "postgres"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
-import type { Db } from "../src/client.js"
-import * as repositories from "../src/repositories/index.js"
-import * as schema from "../src/schema/index.js"
+import type { Db } from "@/client.js"
+import * as repositories from "@/repositories/index.js"
 
 const here = fileURLToPath(new URL(".", import.meta.url))
 const migrationsFolder = resolve(here, "..", "migrations")
@@ -19,7 +18,7 @@ let db: Db
 beforeAll(async () => {
   container = await new PostgreSqlContainer("postgres:17-alpine").start()
   sql = postgres(container.getConnectionUri(), { max: 4, onnotice: () => {} })
-  db = drizzle(sql, { schema })
+  db = drizzle({ client: sql })
   await migrate(db, { migrationsFolder })
 })
 
