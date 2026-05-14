@@ -12,13 +12,13 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks()
 
   const logger = app.get(Logger)
-  logger.log("Worker context started — no jobs registered yet (P4 wires BullMQ consumers)")
+  logger.log("Worker context started — BullMQ consumers active")
 
   // Keep the Node event loop alive until SIGTERM/SIGINT. NestJS's
   // `enableShutdownHooks()` listens for both signals and unwinds providers
   // gracefully. A pending `setInterval` is the simplest event-loop reference
-  // that survives Node 24's stricter idle-exit behaviour. Once BullMQ
-  // consumers are registered (P4), they own the keep-alive instead.
+  // that survives Node 24's stricter idle-exit behaviour and is also a
+  // belt-and-braces against ever ending up with no consumers registered.
   setInterval(() => {}, 1 << 30)
 }
 

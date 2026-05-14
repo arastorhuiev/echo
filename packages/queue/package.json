@@ -1,29 +1,26 @@
 {
-  "name": "@echo/worker",
+  "name": "@echo/queue",
   "version": "0.0.0",
   "private": true,
-  "type": "commonjs",
-  "main": "./dist/main.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-    "start": "node dist/main.js",
+    "prepare": "pnpm run build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@echo/config": "workspace:*",
-    "@echo/observability": "workspace:*",
-    "@echo/queue": "workspace:*",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.4",
-    "@nestjs/core": "^11.0.0",
-    "bullmq": "^5.76.8",
-    "nestjs-pino": "^4.6.1",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "bullmq": "^5.76.8"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
     "tsc-alias": "^1.8.17"
   }
 }
