@@ -1,0 +1,107 @@
+name: echo
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: echo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-echo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-echo}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-echo} -d ${POSTGRES_DB:-echo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: echo-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: api
+    container_name: echo-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: "3000"
+      DATABASE_URL: ${DATABASE_URL:-postgres://echo:changeme@postgres:5432/echo}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health/live > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────────────────
+  # Commented out for P1 — activated by later phases.
+  # ─────────────────────────────────────────────────────────────
+
+  # worker — uncomment when P4 wires BullMQ and apps/worker exists.
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     args:
+  #       APP: worker
+  #   container_name: echo-worker
+  #   restart: unless-stopped
+  #   environment:
+  #     NODE_ENV: ${NODE_ENV:-development}
+  #     APP_ROLE: worker
+  #     DATABASE_URL: ${DATABASE_URL:-postgres://echo:changeme@postgres:5432/echo}
+  #     REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+  #   depends_on:
+  #     postgres: { condition: service_healthy }
+  #     redis: { condition: service_healthy }
+
+  # osint-py — uncomment when P7 lands the Sherlock sidecar.
+  # osint-py:
+  #   build:
+  #     context: ./services/echo-osint-py
+  #   container_name: echo-osint-py
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:8000:8000"
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # caddy — production reverse proxy with TLS.
+  # Not used locally; activated when P11 (deployment) is unfrozen.
+
+volumes:
+  postgres-data:
+  redis-data:

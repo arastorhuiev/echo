@@ -104,10 +104,10 @@ These override anything else in this document if there's a conflict. Violating t
 6. Document `pnpm dev`, `pnpm build`, `docker compose up`, `docker compose down -v` in `README.md`.
 
 ### Definition of done
-- [ ] `docker compose up --build` completes; `curl http://localhost/api/health/live` returns `{ "status": "live" }`.
+- [ ] `docker compose up --build` completes; `curl http://localhost:3000/api/health/live` returns `{ "status": "live" }` (port 3000 — Caddy is not part of the local stack; production proxy lands in P11).
 - [ ] `docker compose down -v` cleans up volumes.
-- [ ] Image size is sane (< 250 MB for Node runtime).
-- [ ] No production secret has a default value in `.env.example`.
+- [ ] Image size is sane (< 350 MB for the Node runtime image).
+- [ ] No production secret has a default value in `.env.example` — every secret-shaped value is `changeme` or empty.
 
 ### Notes for next phase
 - Capture which Postgres extensions we want enabled (none yet) so P2 can document them.

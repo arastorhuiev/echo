@@ -50,6 +50,37 @@ These are reserved in the schema and acknowledged in [ADR-0012](./docs/adr/0012-
 - **No deployment in the initial plan.** No CI step pushes images, provisions cloud resources, or deploys anywhere until P11 is explicitly activated.
 - **Pre-commit checks** for secret leakage land as part of P0 (Biome + a secret scanner).
 
+## Local development
+
+Prerequisites: Node 24 (use `nvm use` to pick up `.nvmrc`), pnpm 11 (`corepack enable && corepack prepare pnpm@latest --activate`), Docker.
+
+```bash
+# Install workspace deps
+pnpm install
+
+# Lint, typecheck, and run tests
+pnpm check
+
+# Build a specific app
+pnpm -F @echo/api build
+
+# Bring up the local stack (api + postgres + redis)
+cp .env.example .env   # only needed for non-default values
+docker compose up -d --build
+
+# Verify the API is alive
+curl http://localhost:3000/api/health/live
+# → {"status":"live"}
+
+# Tail logs
+docker compose logs -f api
+
+# Tear down (deletes the postgres + redis volumes)
+docker compose down -v
+```
+
+The local stack does **not** include Caddy or any reverse proxy — the API container exposes port 3000 directly on `127.0.0.1`. Production deployment with TLS is deferred (see [P11 in the agent plan](./docs/AGENT_PLAN.md#p11--deployment-deferred--out-of-initial-scope)).
+
 ## Contributing / agent workflow
 
 If you're an executor agent picking up work: start with [`docs/AGENT_PLAN.md`](./docs/AGENT_PLAN.md) — phases are sized for one PR each and have explicit definition-of-done checks.
