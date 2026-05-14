@@ -39,6 +39,19 @@ out/
 *.tsbuildinfo
 .tsbuildinfo
 
+# Defensive: tsc sometimes emits compiled JS/d.ts outside dist/ when an
+# included file imports from a path that's outside rootDir. Catch those.
+packages/**/test/**/*.js
+packages/**/test/**/*.d.ts
+packages/**/test/**/*.js.map
+packages/**/scripts/**/*.js
+packages/**/scripts/**/*.d.ts
+packages/**/scripts/**/*.js.map
+packages/**/src/**/*.test.js
+packages/**/src/**/*.test.d.ts
+packages/**/src/**/*.int.test.js
+packages/**/src/**/*.int.test.d.ts
+
 # ─────────────────────────────────────────────────────────────
 # NestJS
 # ─────────────────────────────────────────────────────────────
