@@ -11,12 +11,6 @@ export class SidecarHealthIndicator extends HealthIndicator {
   async ping(key: string): Promise<HealthIndicatorResult> {
     const url = this.config.get("OSINT_PY_URL")
 
-    if (!url) {
-      // Sidecar not deployed in P3 — report healthy with `skipped: true`.
-      // P7 lands the sidecar; until then, the readiness check ignores it.
-      return this.getStatus(key, true, { skipped: "OSINT_PY_URL not set" })
-    }
-
     try {
       const res = await fetch(`${url.replace(/\/+$/, "")}/health`, {
         signal: AbortSignal.timeout(2000),

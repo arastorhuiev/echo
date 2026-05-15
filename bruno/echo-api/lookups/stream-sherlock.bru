@@ -1,0 +1,32 @@
+meta {
+  name: lookups - stream (SSE for created lookup)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{apiBase}}/lookups/{{lookupId}}/stream
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+docs {
+  Resume-safe SSE endpoint. Bruno's request panel can't render a
+  streaming body well — use curl instead to watch events arrive in
+  real time:
+
+      LOOKUP_ID=$(curl -s -X POST {{apiBase}}/lookups \
+        -H 'Content-Type: application/json' \
+        -d '{"providerId":"sherlock","query":{"username":"anthropic"}}' \
+        | jq -r .id)
+      curl -N {{apiBase}}/lookups/$LOOKUP_ID/stream
+
+  Reconnect with replay:
+
+      curl -N -H 'Last-Event-ID: 1700000000000-0' \
+        {{apiBase}}/lookups/$LOOKUP_ID/stream
+}

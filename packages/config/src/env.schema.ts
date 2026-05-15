@@ -16,8 +16,10 @@ export const envSchema = z.object({
   // Redis (cache + BullMQ + SSE event bus)
   REDIS_URL: z.string().url(),
 
-  // OSINT Python sidecar (optional in P3 — required in P7)
-  OSINT_PY_URL: z.string().url().optional(),
+  // OSINT Python sidecar — required from P7 onward. Workers calling
+  // Python-only providers (Sherlock, Maigret, …) fail fast if this is
+  // missing; api uses it for the readiness check too.
+  OSINT_PY_URL: z.string().url(),
 
   // OpenTelemetry — optional; without an OTLP endpoint the app still
   // collects spans for in-process consumers but doesn't export anywhere.

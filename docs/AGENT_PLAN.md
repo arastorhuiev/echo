@@ -281,7 +281,7 @@ These override anything else in this document if there's a conflict. Violating t
 
 ## P7 — First real provider (Sherlock)
 
-**Status:** not started
+**Status:** done (2026-05-15)
 **Estimated size:** 1.5 days
 **Goal:** A working Python sidecar housing Sherlock; a Node-side `OsintProvider` that calls it; end-to-end test that runs a real username lookup.
 
@@ -316,6 +316,12 @@ These override anything else in this document if there's a conflict. Violating t
 
 ### Notes for next phase
 - Capture Sherlock's actual rate-limit posture in `defaults`. If Sherlock is bouncing off site bans, plan proxy support before adding more scraping providers.
+- **P7 landing notes (2026-05-15):**
+  - Sidecar uses subprocess (`python -u -m sherlock_project`) rather than the library API — gives us clean cancellation (SIGTERM on disconnect, SIGKILL after 3 s grace) at the cost of ~300 ms cold-start per request. Worth revisiting if RPS climbs.
+  - `OSINT_PY_URL` is now **required** in the env schema (was optional in P3). The api readiness check no longer has a "skipped" branch.
+  - `OsintProviderRegistryModule` gained `forRootAsync` so the api/worker can DI-resolve providers from `ConfigService` (Sherlock needs `OSINT_PY_URL`). M1 will need to consider whether Effect-TS would have made this cleaner or added friction.
+  - Bruno collection lives at `bruno/echo-api/` — first phase to ship one. Future provider PRs should add a request per provider under `bruno/echo-api/lookups/`.
+  - Proxy posture is **unaddressed** in this phase. P8 must decide before adding Maigret (also scrape-based) whether the shared sidecar needs an outbound proxy pool — failing repeatedly on the same residential IP costs more lookups than it's worth.
 
 ---
 

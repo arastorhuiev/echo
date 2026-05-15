@@ -256,9 +256,15 @@ importers:
 
   packages/providers:
     dependencies:
+      '@echo/config':
+        specifier: workspace:*
+        version: link:../config
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.20(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^4.0.4
+        version: 4.0.4(@nestjs/common@11.1.20(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1

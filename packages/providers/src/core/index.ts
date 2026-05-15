@@ -14,6 +14,7 @@ export {
 export { OSINT_PROVIDERS_TOKEN, OsintProviderRegistry } from "@/core/registry.js"
 export {
   OsintProviderRegistryModule,
+  type OsintProviderRegistryModuleAsyncInput,
   type OsintProviderRegistryModuleInput,
 } from "@/core/registry.module.js"
 export {

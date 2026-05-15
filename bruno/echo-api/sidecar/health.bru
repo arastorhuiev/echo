@@ -1,0 +1,16 @@
+meta {
+  name: sidecar - health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{sidecarBase}}/health
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.status: eq ok
+}
