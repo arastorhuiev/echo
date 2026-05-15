@@ -12,7 +12,6 @@ import { forRootBullModule } from "@echo/queue"
 import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
-import { EchoDemoModule } from "@/echo-demo/echo.module"
 import { LookupsModule } from "@/lookups/lookups.module"
 
 const isProd = process.env.NODE_ENV === "production"
@@ -43,8 +42,6 @@ const isProd = process.env.NODE_ENV === "production"
     RedisModule,
     // Generic lookup processor — runs whatever the api enqueues.
     LookupsModule,
-    // Demo processor — only attached in non-prod, in line with the api side.
-    ...(isProd ? [] : [EchoDemoModule]),
   ],
 })
 export class AppModule {}

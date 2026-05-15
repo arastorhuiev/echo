@@ -12,7 +12,6 @@ import { forRootBullModule } from "@echo/queue"
 import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
-import { EchoDemoModule } from "@/echo-demo/echo.module"
 import { HealthModule } from "@/health/health.module"
 import { LookupsModule } from "@/lookups/lookups.module"
 import { MetricsController } from "@/metrics/metrics.controller"
@@ -55,8 +54,6 @@ const isProd = process.env.NODE_ENV === "production"
     ProvidersModule,
     // Prometheus registry (global module from @echo/observability)
     MetricsModule,
-    // Internal demo queue endpoint — never exposed in production
-    ...(isProd ? [] : [EchoDemoModule]),
   ],
   controllers: [MetricsController],
 })

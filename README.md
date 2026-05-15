@@ -99,15 +99,6 @@ open http://localhost:3000/api/docs
 # Prometheus metrics
 curl http://localhost:3000/api/metrics
 
-# BullMQ smoke test (dev only — endpoint disabled when NODE_ENV=production)
-# Enqueues a job on q.echo; the worker logs it within ~1 s.
-curl -X POST http://localhost:3000/api/_internal/echo-job \
-  -H "Content-Type: application/json" \
-  -d '{"msg":"hello from api"}'
-# → {"jobId":"<n>","queue":"q.echo"}
-# Then check worker logs:
-docker compose logs worker --tail=5 | grep "Processed job"
-
 # Tail logs (api or worker)
 docker compose logs -f api
 docker compose logs -f worker

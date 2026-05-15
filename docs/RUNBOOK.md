@@ -1,37 +1,41 @@
 # Runbook
 
-> Operational quick reference. Pre-implementation: this document is mostly a skeleton with the right *headings* so future-you knows where to put things. Each section will be filled in as the corresponding phase of [`AGENT_PLAN.md`](./AGENT_PLAN.md) lands.
+> Operational quick reference. Sections are filled in as the corresponding phase of [`AGENT_PLAN.md`](./AGENT_PLAN.md) lands. Phases P0–P7 are implemented; later sections still carry placeholders.
 
 ## Local development
 
 ### First-time setup
 ```bash
 # Install Node 24 LTS (use nvm or volta)
-nvm use            # picks up .nvmrc once P0 lands
+nvm use            # picks up .nvmrc
 
-# Install pnpm 10
+# Install pnpm 11
 corepack enable
-corepack prepare pnpm@latest --activate
+corepack prepare pnpm@11.1.2 --activate
 
-# Install deps
+# Install deps (also installs the simple-git-hooks pre-commit shim)
 pnpm install
 
-# Bring up the local stack
-docker compose up -d postgres redis    # P1
-docker compose up -d osint-py          # P7
+# Bring up the local stack (postgres + redis + api + worker + osint-py)
+cp .env.example .env
+docker compose up -d --build
 
-# Run migrations
-pnpm -F @echo/db migrate:dev           # P2
+# Run migrations (api also auto-migrates on boot)
+pnpm -F @echo/db migrate:dev
 
-# Start the API and worker (each in its own terminal)
-pnpm -F @echo/api dev
-pnpm -F @echo/worker dev
+# Smoke test: enqueue a sherlock lookup and watch the SSE stream
+LOOKUP_ID=$(curl -s -X POST http://localhost:3000/api/lookups \
+  -H 'Content-Type: application/json' \
+  -d '{"providerId":"sherlock","query":{"username":"anthropic"}}' \
+  | jq -r .id)
+curl -N http://localhost:3000/api/lookups/$LOOKUP_ID/stream
 ```
 
 ### Common commands
-- `pnpm check` — lint + typecheck + test (the gate before pushing).
-- `pnpm -r build` — build everything.
-- `pnpm -F @echo/<pkg> test` — run one package's tests.
+- `pnpm check` — lint + typecheck + test (gates the pre-commit hook).
+- `pnpm -r build` — build everything via each package's `tsconfig.build.json`.
+- `pnpm test` — unit tests across the workspace.
+- `pnpm test:int` — integration tests (Testcontainers — Docker must be running).
 - `docker compose down -v` — nuke local state (Postgres + Redis volumes deleted).
 
 ## Production deployment
@@ -94,6 +98,7 @@ psql $DATABASE_URL -c "UPDATE providers SET breaker_state='closed', breaker_open
 - **Worker not consuming jobs** → check worker container is up; check Redis connection; check for stuck active jobs (`bull:q.<id>:active`).
 - **Database connection storm** → check pgBouncer / connection pool sizing; restart API.
 - **Sherlock sidecar OOM** → restart `osint-py`; investigate which Python tool leaked; consider per-tool memory limits in compose.
+- **Sidecar `/health` failing but Python alive** → check `docker compose logs osint-py` for stuck `sherlock_project` child processes; the sidecar SIGKILLs after a 3 s grace window but a wedged event loop can stall that.
 
 ## Useful one-liners
 
@@ -101,9 +106,12 @@ psql $DATABASE_URL -c "UPDATE providers SET breaker_state='closed', breaker_open
 # How many lookups in the last hour?
 psql $DATABASE_URL -c "SELECT provider_id, status, COUNT(*) FROM lookups WHERE created_at > NOW()-interval '1 hour' GROUP BY 1,2;"
 
-# Peek at queue lengths
-redis-cli LLEN bull:q.sherlock:wait
-redis-cli LLEN bull:q.sherlock:active
+# Peek at queue lengths (one generic queue today; per-provider queues land in P9)
+redis-cli LLEN bull:q.lookup:wait
+redis-cli LLEN bull:q.lookup:active
+
+# Inspect the realtime SSE stream for a specific lookup
+redis-cli XRANGE lookup:events:<lookup-id> - +
 
 # Tail container logs
 docker compose logs -f api worker --tail=200

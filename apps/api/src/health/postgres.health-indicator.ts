@@ -1,25 +1,24 @@
 import type { DbClient } from "@echo/db/client"
 import { DB_CLIENT } from "@echo/nest"
 import { Inject, Injectable } from "@nestjs/common"
-import { HealthCheckError, HealthIndicator, type HealthIndicatorResult } from "@nestjs/terminus"
+import { HealthIndicatorService } from "@nestjs/terminus"
 
 @Injectable()
-export class PostgresHealthIndicator extends HealthIndicator {
-  constructor(@Inject(DB_CLIENT) private readonly dbClient: DbClient) {
-    super()
-  }
+export class PostgresHealthIndicator {
+  constructor(
+    @Inject(DB_CLIENT) private readonly dbClient: DbClient,
+    private readonly health: HealthIndicatorService,
+  ) {}
 
-  async ping(key: string): Promise<HealthIndicatorResult> {
+  async ping(key: string) {
+    const indicator = this.health.check(key)
     try {
       await this.dbClient.ping()
-      return this.getStatus(key, true)
+      return indicator.up()
     } catch (err) {
-      throw new HealthCheckError(
-        `${key} check failed`,
-        this.getStatus(key, false, {
-          message: err instanceof Error ? err.message : String(err),
-        }),
-      )
+      return indicator.down({
+        message: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 }

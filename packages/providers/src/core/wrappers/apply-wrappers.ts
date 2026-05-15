@@ -1,9 +1,6 @@
 import type { Redis } from "ioredis"
 import type { OsintProvider } from "@/core/provider.js"
-import { withBreaker } from "@/core/wrappers/with-breaker.js"
 import { withCache } from "@/core/wrappers/with-cache.js"
-import { withRateLimit } from "@/core/wrappers/with-rate-limit.js"
-import { withSingleFlight } from "@/core/wrappers/with-single-flight.js"
 import { withTracing } from "@/core/wrappers/with-tracing.js"
 
 export interface WrapperDeps {
@@ -13,12 +10,14 @@ export interface WrapperDeps {
 
 /**
  * Compose every cross-cutting wrapper around a provider. Order matters:
- * - Tracing on the OUTSIDE so it observes the wrapped behaviour
- *   (cache hits, breaker short-circuits, etc. all show up in the span).
- * - Cache before single-flight so single-flight only fires for misses.
- * - Single-flight before breaker so the lock isn't taken during a
- *   short-circuit return.
- * - Breaker before rate-limit so a tripped breaker doesn't burn tokens.
+ * tracing wraps the outside so cache hits, future breaker short-circuits,
+ * etc. all show up in the same span.
+ *
+ * Currently active: cache + tracing. The single-flight, breaker, and
+ * rate-limit wrappers will be added back in P9 (hardening) once their
+ * real implementations land — the stub pass-through versions live in
+ * `with-{single-flight,breaker,rate-limit}.ts` with their planned
+ * design captured in module-level comments.
  *
  * The composer is THE place to add or reorder wrappers — providers
  * never call them directly.
@@ -27,7 +26,5 @@ export function applyWrappers<Q, R>(
   provider: OsintProvider<Q, R>,
   deps: WrapperDeps,
 ): OsintProvider<Q, R> {
-  return withTracing(
-    withCache(withSingleFlight(withBreaker(withRateLimit(provider)), deps.redis), deps.redis),
-  )
+  return withTracing(withCache(provider, deps.redis))
 }

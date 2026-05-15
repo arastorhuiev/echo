@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { describeOsintProvider } from "@/core/conformance.js"
 import type { ProviderEvent } from "@/core/provider.js"
 import { stubSuccessProvider } from "@/stubs/stub-success.js"
+import { describeOsintProvider } from "@/testing/conformance.js"
 
 describeOsintProvider(stubSuccessProvider, { knownGood: { hello: "world" } })
 

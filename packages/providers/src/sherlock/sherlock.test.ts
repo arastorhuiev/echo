@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { describeOsintProvider } from "@/core/conformance.js"
 import { ProviderError, type ProviderEvent } from "@/core/provider.js"
 import { createSherlockProvider, type FetchLike } from "@/sherlock/sherlock.js"
+import { describeOsintProvider } from "@/testing/conformance.js"
 
 const ctx = () => ({ lookupId: "test-lookup", signal: new AbortController().signal })
 

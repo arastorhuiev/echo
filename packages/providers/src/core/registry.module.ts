@@ -7,10 +7,6 @@ import {
 import type { OsintProvider } from "@/core/provider.js"
 import { OSINT_PROVIDERS_TOKEN, OsintProviderRegistry } from "@/core/registry.js"
 
-export interface OsintProviderRegistryModuleInput {
-  readonly providers: readonly OsintProvider[]
-}
-
 export interface OsintProviderRegistryModuleAsyncInput extends Pick<ModuleMetadata, "imports"> {
   readonly inject: readonly InjectionToken[]
   // NestJS's own async-factory pattern uses `any[]` for args because the
@@ -27,26 +23,12 @@ export interface OsintProviderRegistryModuleAsyncInput extends Pick<ModuleMetada
  * module in the app graph. Both apps/api and apps/worker register the
  * same provider set so they have the same view of inputSchemas etc.
  *
- * Two registration styles:
- *
- * - `forRoot({ providers: [...] })` — static set, e.g. stubs only.
- * - `forRootAsync({ imports, inject, useFactory })` — when providers
- *   need DI-resolved values (Sherlock pulls OSINT_PY_URL from ConfigService).
+ * Async-only: real providers (Sherlock, …) need DI-resolved values
+ * (`OSINT_PY_URL` from `ConfigService`). Stub-only registration for
+ * tests just feeds a constant array through the same async factory.
  */
 @Module({})
 export class OsintProviderRegistryModule {
-  static forRoot(input: OsintProviderRegistryModuleInput): DynamicModule {
-    return {
-      module: OsintProviderRegistryModule,
-      global: true,
-      providers: [
-        { provide: OSINT_PROVIDERS_TOKEN, useValue: input.providers },
-        OsintProviderRegistry,
-      ],
-      exports: [OsintProviderRegistry],
-    }
-  }
-
   static forRootAsync(input: OsintProviderRegistryModuleAsyncInput): DynamicModule {
     return {
       module: OsintProviderRegistryModule,

@@ -12,6 +12,11 @@ import { Redis } from "ioredis"
 /** Stream TTL after the lookup terminates — keeps SSE replay window alive for late reconnects. */
 const STREAM_TTL_SEC = 60 * 60
 
+interface CancelSubscription {
+  readonly cancelSub: Redis
+  dispose(): Promise<void>
+}
+
 @Processor(Q_LOOKUP)
 export class LookupProcessor extends WorkerHost {
   private readonly logger = new Logger(LookupProcessor.name)
@@ -27,9 +32,8 @@ export class LookupProcessor extends WorkerHost {
 
   /**
    * Generic lookup runner — resolves the provider from the registry,
-   * wraps it with all cross-cutting concerns (cache / single-flight /
-   * breaker / rate-limit / tracing), iterates the event stream, and
-   * persists each event in lock-step to BOTH Postgres `lookup_events`
+   * wraps it with cross-cutting concerns, iterates the event stream,
+   * and persists each event in lock-step to BOTH Postgres `lookup_events`
    * (durable history) AND a Redis Stream `lookup:events:<id>`
    * (realtime fan-out for SSE consumers).
    *
@@ -47,24 +51,16 @@ export class LookupProcessor extends WorkerHost {
       throw new Error(`Unknown providerId in job ${job.id}: ${providerId}`)
     }
 
-    // BullMQ retry: the prior attempt's lookup_events rows would clash
-    // with the new attempt's (lookup_id, seq) values under the unique
-    // index, so wipe them. Idempotent on first attempt (no rows yet).
+    // BullMQ retry: prior attempt's lookup_events would clash with the
+    // new attempt's (lookup_id, seq) under the unique index. Idempotent
+    // on the first attempt — no rows yet.
     if (job.attemptsMade > 0) {
       await repositories.lookupEvents.deleteByLookup(this.dbClient.db, lookupId)
     }
 
     const wrapped = applyWrappers(provider, { redis: this.redis })
     const controller = new AbortController()
-
-    // Dedicated ioredis connection — pub/sub locks the connection,
-    // so it can't share with the cache/health-check Redis client.
-    const cancelSub = new Redis(this.config.get("REDIS_URL"), {
-      maxRetriesPerRequest: null,
-      lazyConnect: false,
-    })
-    await cancelSub.subscribe(lookupCancelChannel(lookupId))
-    cancelSub.on("message", () => controller.abort())
+    const subscription = await this.setupCancelSubscriber(lookupId, controller)
 
     await repositories.lookups.markRunning(this.dbClient.db, lookupId)
 
@@ -74,8 +70,7 @@ export class LookupProcessor extends WorkerHost {
     try {
       for await (const event of wrapped.run(query, { lookupId, signal: controller.signal })) {
         seq++
-        await repositories.lookupEvents.append(this.dbClient.db, lookupId, seq, event)
-        await this.redis.xadd(streamKey, "*", "data", JSON.stringify(event))
+        await this.persistAndFanout(lookupId, seq, event, streamKey)
         if (event._tag === "Final") result = event.data
       }
       await repositories.lookups.markDone(this.dbClient.db, lookupId, result)
@@ -84,34 +79,80 @@ export class LookupProcessor extends WorkerHost {
     } catch (err) {
       if (controller.signal.aborted) {
         seq++
-        const cancelEvent = { _tag: "Cancelled" as const }
-        await repositories.lookupEvents.append(this.dbClient.db, lookupId, seq, cancelEvent)
-        await this.redis.xadd(streamKey, "*", "data", JSON.stringify(cancelEvent))
-        await repositories.lookups.markCancelled(this.dbClient.db, lookupId)
-        this.logger.log(`Lookup ${lookupId} cancelled (provider=${providerId})`)
+        await this.handleCancellation(lookupId, seq, streamKey, providerId)
         return { cancelled: true }
       }
-
-      const kind = err instanceof ProviderError ? err.kind : "Unknown"
-      const message = err instanceof Error ? err.message : String(err)
       seq++
-      const failedEvent = { _tag: "Failed" as const, kind, message }
-      await repositories.lookupEvents.append(this.dbClient.db, lookupId, seq, failedEvent)
-      await this.redis.xadd(streamKey, "*", "data", JSON.stringify(failedEvent))
-      await repositories.lookups.markFailed(this.dbClient.db, lookupId, kind, message)
-
-      this.logger.warn(
-        `Lookup ${lookupId} failed (provider=${providerId}, kind=${kind}): ${message}`,
-      )
+      await this.handleFailure(lookupId, seq, streamKey, providerId, err)
       throw err
     } finally {
       // Bound the SSE replay window so old streams don't accumulate forever.
       await this.redis.expire(streamKey, STREAM_TTL_SEC).catch(() => {
         /* nothing useful to do if EXPIRE fails */
       })
-      // Tear down the per-job cancel subscriber.
-      await cancelSub.unsubscribe().catch(() => {})
-      cancelSub.disconnect()
+      await subscription.dispose()
     }
+  }
+
+  /**
+   * Dedicated ioredis connection for the lookup's cancel channel.
+   * pub/sub locks the connection, so it can't share with cache/health
+   * clients. The returned `dispose()` unsubscribes and disconnects.
+   */
+  private async setupCancelSubscriber(
+    lookupId: string,
+    controller: AbortController,
+  ): Promise<CancelSubscription> {
+    const cancelSub = new Redis(this.config.get("REDIS_URL"), {
+      maxRetriesPerRequest: null,
+      lazyConnect: false,
+    })
+    await cancelSub.subscribe(lookupCancelChannel(lookupId))
+    cancelSub.on("message", () => controller.abort())
+    return {
+      cancelSub,
+      async dispose() {
+        await cancelSub.unsubscribe().catch(() => {})
+        cancelSub.disconnect()
+      },
+    }
+  }
+
+  /** Append one event to both durable history and the realtime fan-out stream. */
+  private async persistAndFanout(
+    lookupId: string,
+    seq: number,
+    event: unknown,
+    streamKey: string,
+  ): Promise<void> {
+    await repositories.lookupEvents.append(this.dbClient.db, lookupId, seq, event)
+    await this.redis.xadd(streamKey, "*", "data", JSON.stringify(event))
+  }
+
+  private async handleCancellation(
+    lookupId: string,
+    seq: number,
+    streamKey: string,
+    providerId: string,
+  ): Promise<void> {
+    const event = { _tag: "Cancelled" as const }
+    await this.persistAndFanout(lookupId, seq, event, streamKey)
+    await repositories.lookups.markCancelled(this.dbClient.db, lookupId)
+    this.logger.log(`Lookup ${lookupId} cancelled (provider=${providerId})`)
+  }
+
+  private async handleFailure(
+    lookupId: string,
+    seq: number,
+    streamKey: string,
+    providerId: string,
+    err: unknown,
+  ): Promise<void> {
+    const kind = err instanceof ProviderError ? err.kind : "Unknown"
+    const message = err instanceof Error ? err.message : String(err)
+    const event = { _tag: "Failed" as const, kind, message }
+    await this.persistAndFanout(lookupId, seq, event, streamKey)
+    await repositories.lookups.markFailed(this.dbClient.db, lookupId, kind, message)
+    this.logger.warn(`Lookup ${lookupId} failed (provider=${providerId}, kind=${kind}): ${message}`)
   }
 }
