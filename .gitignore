@@ -191,3 +191,8 @@ apis/bruno/environments/local.bru
 .notes/
 TODO.local.md
 NOTES.local.md
+
+# ─────────────────────────────────────────────────────────────
+# Local-only docs (per-developer notes that shouldn't clutter the repo)
+# ─────────────────────────────────────────────────────────────
+local_docs/
