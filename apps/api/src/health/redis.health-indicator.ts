@@ -1,7 +1,7 @@
+import { REDIS } from "@echo/nest"
 import { Inject, Injectable } from "@nestjs/common"
 import { HealthCheckError, HealthIndicator, type HealthIndicatorResult } from "@nestjs/terminus"
 import type { Redis } from "ioredis"
-import { REDIS } from "@/redis/tokens"
 
 @Injectable()
 export class RedisHealthIndicator extends HealthIndicator {

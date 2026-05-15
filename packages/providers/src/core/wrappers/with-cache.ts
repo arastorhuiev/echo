@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis"
+import { providerResultCacheKey } from "@/core/cache-keys.js"
 import { queryHash } from "@/core/canonicalize.js"
 import type { OsintProvider } from "@/core/provider.js"
 
@@ -17,7 +18,7 @@ export function withCache<Q, R>(provider: OsintProvider<Q, R>, redis: Redis): Os
   return {
     ...provider,
     async *run(query, ctx) {
-      const key = `cache:result:${provider.id}:${queryHash(query)}`
+      const key = providerResultCacheKey(provider.id, queryHash(query))
       const cached = await redis.get(key)
       if (cached !== null) {
         try {

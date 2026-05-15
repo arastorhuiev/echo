@@ -36,6 +36,14 @@ export interface ProviderDefaults {
     readonly failureThreshold: number
     readonly resetMs: number
   }
+  /**
+   * BullMQ retry attempts for jobs targeting this provider. Defaults
+   * to the queue-wide value (3) when omitted. Set to `1` for providers
+   * that can't fail transiently — e.g. validation-only stubs that
+   * deterministically throw — to avoid status churn from useless
+   * retries.
+   */
+  readonly attempts?: number
 }
 
 /**

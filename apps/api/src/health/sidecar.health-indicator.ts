@@ -1,19 +1,15 @@
 import type { AppConfigService } from "@echo/config"
 import { Injectable } from "@nestjs/common"
-import { ConfigService } from "@nestjs/config"
 import { HealthCheckError, HealthIndicator, type HealthIndicatorResult } from "@nestjs/terminus"
 
 @Injectable()
 export class SidecarHealthIndicator extends HealthIndicator {
-  constructor(private readonly config: ConfigService) {
+  constructor(private readonly config: AppConfigService) {
     super()
   }
 
   async ping(key: string): Promise<HealthIndicatorResult> {
-    // ConfigService is injected with default generics for DI; cast to the
-    // typed alias for Zod-validated key access. Two-step `unknown` cast
-    // because the strict-typed flag is not assignable from the loose default.
-    const url = (this.config as unknown as AppConfigService).get("OSINT_PY_URL")
+    const url = this.config.get("OSINT_PY_URL")
 
     if (!url) {
       // Sidecar not deployed in P3 — report healthy with `skipped: true`.

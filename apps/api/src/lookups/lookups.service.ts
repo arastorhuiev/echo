@@ -1,11 +1,12 @@
 import { repositories } from "@echo/db"
 import type { DbClient } from "@echo/db/client"
+import { DB_CLIENT, REDIS } from "@echo/nest"
 import { OsintProviderRegistry, queryHash } from "@echo/providers"
-import { type LookupJobData, Q_LOOKUP } from "@echo/queue"
+import { type LookupJobData, lookupCancelChannel, Q_LOOKUP } from "@echo/queue"
 import { InjectQueue } from "@nestjs/bullmq"
-import { BadRequestException, Inject, Injectable } from "@nestjs/common"
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common"
 import type { Queue } from "bullmq"
-import { DB_CLIENT } from "@/db/tokens"
+import type { Redis } from "ioredis"
 
 export interface EnqueueLookupInput {
   readonly providerId: string
@@ -18,10 +19,23 @@ export interface EnqueueLookupResult {
   readonly streamUrl: string
 }
 
+export interface CancelLookupResult {
+  readonly id: string
+  readonly cancelRequested: boolean
+  /**
+   * The lookup's status at the moment cancel() was called. May be stale
+   * by the time the response is read — the worker could have completed
+   * or failed between our DB lookup and the publish. Callers wanting
+   * the post-cancel status should re-GET the lookup.
+   */
+  readonly previousStatus: string
+}
+
 @Injectable()
 export class LookupsService {
   constructor(
     @Inject(DB_CLIENT) private readonly dbClient: DbClient,
+    @Inject(REDIS) private readonly redis: Redis,
     @InjectQueue(Q_LOOKUP) private readonly queue: Queue,
     private readonly registry: OsintProviderRegistry,
   ) {}
@@ -64,14 +78,41 @@ export class LookupsService {
       providerId: provider.id,
       query: parsedQuery,
     }
-    await this.queue.add("lookup", jobData, { jobId: lookup.id })
+    await this.queue.add("lookup", jobData, {
+      jobId: lookup.id,
+      // Per-provider override of the queue-wide attempts default (3).
+      // Used by deterministically-failing providers like stub-fail to
+      // avoid pointless retries that just churn the lookups.status.
+      ...(provider.defaults.attempts !== undefined ? { attempts: provider.defaults.attempts } : {}),
+    })
 
     return {
       id: lookup.id,
-      // SSE endpoint lands in P6; the URL is committed-to here so clients
-      // can poll-then-stream once available.
       streamUrl: `/api/lookups/${lookup.id}/stream`,
     }
+  }
+
+  /**
+   * Request cancellation of an in-flight lookup. Publishes a signal on
+   * `lookup:cancel:<id>`; the worker's per-job subscriber wakes up and
+   * fires the AbortController inside `LookupProcessor.process`. The
+   * actual `markCancelled` happens in the worker once the abort lands —
+   * this method only returns "request accepted" / "already terminal".
+   */
+  async cancel(id: string): Promise<CancelLookupResult> {
+    const lookup = await repositories.lookups.findById(this.dbClient.db, id)
+    if (!lookup) {
+      throw new NotFoundException({ error: "LookupNotFound", id })
+    }
+
+    const isTerminal =
+      lookup.status === "done" || lookup.status === "failed" || lookup.status === "cancelled"
+    if (isTerminal) {
+      return { id, cancelRequested: false, previousStatus: lookup.status }
+    }
+
+    await this.redis.publish(lookupCancelChannel(id), "1")
+    return { id, cancelRequested: true, previousStatus: lookup.status }
   }
 
   findById(id: string) {

@@ -21,6 +21,8 @@ export const stubFailProvider: OsintProvider<StubFailInput, unknown> = {
   defaults: defaultsFor("meta", {
     cacheTtlSec: 0,
     breaker: { failureThreshold: 1, resetMs: 5_000 },
+    // Deterministic failure — retrying just churns the row's status. P5 noted this.
+    attempts: 1,
   }),
 
   async *run() {

@@ -1,4 +1,12 @@
-import { bigserial, index, integer, jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core"
+import {
+  bigserial,
+  integer,
+  jsonb,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core"
 import { lookups } from "@/schema/lookups.js"
 
 export const lookupEvents = pgTable(
@@ -12,7 +20,12 @@ export const lookupEvents = pgTable(
     payload: jsonb("payload").$type<unknown>().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("lookup_events_lookup_seq_idx").on(t.lookupId, t.seq)],
+  // UNIQUE so a worker retry that re-uses (lookupId, seq) gets a fast
+  // failure instead of silently appending duplicates. The processor
+  // wipes prior-attempt rows (`deleteByLookup`) before re-running so
+  // the unique constraint is never actually hit in practice — it's a
+  // belt-and-braces guard against a missed cleanup.
+  (t) => [uniqueIndex("lookup_events_lookup_seq_unq").on(t.lookupId, t.seq)],
 )
 
 export type LookupEvent = typeof lookupEvents.$inferSelect

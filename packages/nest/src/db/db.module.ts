@@ -2,8 +2,15 @@ import type { AppConfigService } from "@echo/config"
 import { createDbClient, type DbClient } from "@echo/db/client"
 import { Global, Inject, Module, type OnApplicationShutdown } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
-import { DB_CLIENT } from "@/db/tokens"
+import { DB_CLIENT } from "@/db/tokens.js"
 
+/**
+ * Global module — exports `DB_CLIENT` (a singleton @echo/db client)
+ * so any feature module in the app graph can inject it without
+ * re-importing DbModule.
+ *
+ * Tears down the pool cleanly via `OnApplicationShutdown`.
+ */
 @Global()
 @Module({
   providers: [

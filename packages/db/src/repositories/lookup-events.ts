@@ -19,3 +19,12 @@ export async function listByLookup(db: Db, lookupId: string): Promise<LookupEven
     .where(eq(lookupEvents.lookupId, lookupId))
     .orderBy(asc(lookupEvents.seq))
 }
+
+/**
+ * Wipe every event row for `lookupId`. Called by the worker on a
+ * BullMQ retry (attemptsMade > 0) so the new attempt's events don't
+ * pile up next to the previous attempt's. Idempotent.
+ */
+export async function deleteByLookup(db: Db, lookupId: string): Promise<void> {
+  await db.delete(lookupEvents).where(eq(lookupEvents.lookupId, lookupId))
+}
