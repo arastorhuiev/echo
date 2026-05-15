@@ -1,0 +1,26 @@
+{
+  "name": "@echo/nest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "prepare": "pnpm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@echo/config": "workspace:*",
+    "@echo/db": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.4",
+    "ioredis": "^5.10.1"
+  },
+  "devDependencies": {
+    "tsc-alias": "^1.8.17"
+  }
+}

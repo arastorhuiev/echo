@@ -1,13 +1,12 @@
 import { repositories } from "@echo/db"
 import type { DbClient } from "@echo/db/client"
+import { DB_CLIENT, REDIS } from "@echo/nest"
 import { OsintProviderRegistry, queryHash } from "@echo/providers"
-import { type LookupJobData, Q_LOOKUP } from "@echo/queue"
+import { type LookupJobData, lookupCancelChannel, Q_LOOKUP } from "@echo/queue"
 import { InjectQueue } from "@nestjs/bullmq"
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common"
 import type { Queue } from "bullmq"
 import type { Redis } from "ioredis"
-import { DB_CLIENT } from "@/db/tokens"
-import { REDIS } from "@/redis/tokens"
 
 export interface EnqueueLookupInput {
   readonly providerId: string
@@ -23,7 +22,13 @@ export interface EnqueueLookupResult {
 export interface CancelLookupResult {
   readonly id: string
   readonly cancelRequested: boolean
-  readonly status: string
+  /**
+   * The lookup's status at the moment cancel() was called. May be stale
+   * by the time the response is read — the worker could have completed
+   * or failed between our DB lookup and the publish. Callers wanting
+   * the post-cancel status should re-GET the lookup.
+   */
+  readonly previousStatus: string
 }
 
 @Injectable()
@@ -73,7 +78,13 @@ export class LookupsService {
       providerId: provider.id,
       query: parsedQuery,
     }
-    await this.queue.add("lookup", jobData, { jobId: lookup.id })
+    await this.queue.add("lookup", jobData, {
+      jobId: lookup.id,
+      // Per-provider override of the queue-wide attempts default (3).
+      // Used by deterministically-failing providers like stub-fail to
+      // avoid pointless retries that just churn the lookups.status.
+      ...(provider.defaults.attempts !== undefined ? { attempts: provider.defaults.attempts } : {}),
+    })
 
     return {
       id: lookup.id,
@@ -97,11 +108,11 @@ export class LookupsService {
     const isTerminal =
       lookup.status === "done" || lookup.status === "failed" || lookup.status === "cancelled"
     if (isTerminal) {
-      return { id, cancelRequested: false, status: lookup.status }
+      return { id, cancelRequested: false, previousStatus: lookup.status }
     }
 
-    await this.redis.publish(`lookup:cancel:${id}`, "1")
-    return { id, cancelRequested: true, status: lookup.status }
+    await this.redis.publish(lookupCancelChannel(id), "1")
+    return { id, cancelRequested: true, previousStatus: lookup.status }
   }
 
   findById(id: string) {

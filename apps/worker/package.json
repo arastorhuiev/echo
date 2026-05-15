@@ -12,6 +12,7 @@
   "dependencies": {
     "@echo/config": "workspace:*",
     "@echo/db": "workspace:*",
+    "@echo/nest": "workspace:*",
     "@echo/observability": "workspace:*",
     "@echo/providers": "workspace:*",
     "@echo/queue": "workspace:*",

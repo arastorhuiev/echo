@@ -1,7 +1,7 @@
 import type { DbClient } from "@echo/db/client"
+import { DB_CLIENT } from "@echo/nest"
 import { Inject, Injectable } from "@nestjs/common"
 import { HealthCheckError, HealthIndicator, type HealthIndicatorResult } from "@nestjs/terminus"
-import { DB_CLIENT } from "@/db/tokens"
 
 @Injectable()
 export class PostgresHealthIndicator extends HealthIndicator {

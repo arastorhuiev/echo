@@ -1,7 +1,7 @@
+import { isTerminalEvent } from "@echo/providers"
+import { lookupEventsKey } from "@echo/queue"
 import { Redis } from "ioredis"
 
-const STREAM_KEY = (lookupId: string) => `lookup:events:${lookupId}`
-const TERMINAL_TAGS: ReadonlySet<string> = new Set(["Final", "Cancelled", "Failed"])
 const XREAD_BLOCK_MS = 1_000
 
 /**
@@ -43,7 +43,7 @@ export class LookupSseStream {
         "BLOCK",
         XREAD_BLOCK_MS,
         "STREAMS",
-        STREAM_KEY(lookupId),
+        lookupEventsKey(lookupId),
         cursor,
       )
       if (!result) continue
@@ -68,8 +68,7 @@ export class LookupSseStream {
 
   private isTerminal(data: string): boolean {
     try {
-      const parsed = JSON.parse(data) as { _tag?: unknown }
-      return typeof parsed._tag === "string" && TERMINAL_TAGS.has(parsed._tag)
+      return isTerminalEvent(JSON.parse(data))
     } catch {
       return false
     }

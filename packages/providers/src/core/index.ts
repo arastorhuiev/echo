@@ -1,3 +1,4 @@
+export { providerResultCacheKey } from "@/core/cache-keys.js"
 export { canonicalizeQuery, queryHash } from "@/core/canonicalize.js"
 export { type ConformanceInput, describeOsintProvider } from "@/core/conformance.js"
 export { defaultsFor } from "@/core/defaults.js"
@@ -15,6 +16,11 @@ export {
   OsintProviderRegistryModule,
   type OsintProviderRegistryModuleInput,
 } from "@/core/registry.module.js"
+export {
+  isTerminalEvent,
+  TERMINAL_EVENT_TAGS,
+  type TerminalEventTag,
+} from "@/core/terminal-tags.js"
 export {
   applyWrappers,
   type WrapperDeps,

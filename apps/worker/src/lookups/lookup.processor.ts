@@ -1,15 +1,14 @@
 import type { AppConfigService } from "@echo/config"
 import { repositories } from "@echo/db"
 import type { DbClient } from "@echo/db/client"
+import { DB_CLIENT, REDIS } from "@echo/nest"
 import { applyWrappers, OsintProviderRegistry, ProviderError } from "@echo/providers"
-import { type LookupJobData, Q_LOOKUP } from "@echo/queue"
+import { type LookupJobData, lookupCancelChannel, lookupEventsKey, Q_LOOKUP } from "@echo/queue"
 import { Processor, WorkerHost } from "@nestjs/bullmq"
 import { Inject, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import type { Job } from "bullmq"
 import { Redis } from "ioredis"
-import { DB_CLIENT } from "@/db/tokens"
-import { REDIS } from "@/redis/tokens"
 
 /** Stream TTL after the lookup terminates — keeps SSE replay window alive for late reconnects. */
 const STREAM_TTL_SEC = 60 * 60
@@ -42,11 +41,18 @@ export class LookupProcessor extends WorkerHost {
    */
   async process(job: Job<LookupJobData>): Promise<unknown> {
     const { lookupId, providerId, query } = job.data
-    const streamKey = `lookup:events:${lookupId}`
+    const streamKey = lookupEventsKey(lookupId)
 
     const provider = this.registry.get(providerId)
     if (!provider) {
       throw new Error(`Unknown providerId in job ${job.id}: ${providerId}`)
+    }
+
+    // BullMQ retry: the prior attempt's lookup_events rows would clash
+    // with the new attempt's (lookup_id, seq) values under the unique
+    // index, so wipe them. Idempotent on first attempt (no rows yet).
+    if (job.attemptsMade > 0) {
+      await repositories.lookupEvents.deleteByLookup(this.dbClient.db, lookupId)
     }
 
     const wrapped = applyWrappers(provider, { redis: this.redis })
@@ -58,7 +64,7 @@ export class LookupProcessor extends WorkerHost {
       maxRetriesPerRequest: null,
       lazyConnect: false,
     })
-    await cancelSub.subscribe(`lookup:cancel:${lookupId}`)
+    await cancelSub.subscribe(lookupCancelChannel(lookupId))
     cancelSub.on("message", () => controller.abort())
 
     await repositories.lookups.markRunning(this.dbClient.db, lookupId)
