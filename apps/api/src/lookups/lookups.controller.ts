@@ -12,8 +12,9 @@ import {
   Req,
   Res,
 } from "@nestjs/common"
-import { ConfigService } from "@nestjs/config"
 import type { FastifyReply, FastifyRequest } from "fastify"
+import { createZodDto } from "nestjs-zod"
+import { z } from "zod"
 import {
   type CancelLookupResult,
   type EnqueueLookupResult,
@@ -21,10 +22,15 @@ import {
 } from "@/lookups/lookups.service"
 import { LookupSseStream } from "@/lookups/sse-stream"
 
-interface CreateLookupBody {
-  providerId: string
-  query: unknown
-}
+const createLookupSchema = z.object({
+  providerId: z.string().min(1),
+  // Provider-specific shape is validated by the registry against
+  // `provider.inputSchema` once we resolve the provider, so at the
+  // edge we only assert the field exists.
+  query: z.unknown(),
+})
+
+class CreateLookupDto extends createZodDto(createLookupSchema) {}
 
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream",
@@ -41,7 +47,7 @@ const SSE_HEARTBEAT_MS = 30_000
 export class LookupsController {
   constructor(
     private readonly service: LookupsService,
-    private readonly config: ConfigService,
+    private readonly config: AppConfigService,
   ) {}
 
   /**
@@ -49,7 +55,7 @@ export class LookupsController {
    * and `query` against the provider's inputSchema.
    */
   @Post()
-  create(@Body() body: CreateLookupBody, @Ip() ipAddress: string): Promise<EnqueueLookupResult> {
+  create(@Body() body: CreateLookupDto, @Ip() ipAddress: string): Promise<EnqueueLookupResult> {
     return this.service.enqueue({
       providerId: body.providerId,
       query: body.query,
@@ -92,7 +98,7 @@ export class LookupsController {
 
     reply.raw.writeHead(200, SSE_HEADERS)
 
-    const redisUrl = (this.config as unknown as AppConfigService).get("REDIS_URL")
+    const redisUrl = this.config.get("REDIS_URL")
     const stream = new LookupSseStream(redisUrl)
 
     const safeWrite = (chunk: string): void => {

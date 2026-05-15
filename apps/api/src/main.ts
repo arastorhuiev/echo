@@ -4,6 +4,7 @@ import { applyMigrations } from "@echo/db"
 import { NestFactory } from "@nestjs/core"
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify"
 import { Logger } from "nestjs-pino"
+import { ZodValidationPipe } from "nestjs-zod"
 import { AppModule } from "@/app.module"
 import { setupOpenApi } from "@/openapi"
 
@@ -20,6 +21,10 @@ async function bootstrap(): Promise<void> {
   })
   app.useLogger(app.get(Logger))
   app.setGlobalPrefix("api")
+  // Auto-validates every @Body()/@Param()/@Query() parameter typed as a
+  // `createZodDto`-derived class. Malformed payloads return a structured
+  // 400 instead of bubbling up as deep-stack TypeErrors.
+  app.useGlobalPipes(new ZodValidationPipe())
   app.enableShutdownHooks()
   setupOpenApi(app)
 

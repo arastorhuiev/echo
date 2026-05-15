@@ -6,7 +6,6 @@ import { applyWrappers, OsintProviderRegistry, ProviderError } from "@echo/provi
 import { type LookupJobData, lookupCancelChannel, lookupEventsKey, Q_LOOKUP } from "@echo/queue"
 import { Processor, WorkerHost } from "@nestjs/bullmq"
 import { Inject, Logger } from "@nestjs/common"
-import { ConfigService } from "@nestjs/config"
 import type { Job } from "bullmq"
 import { Redis } from "ioredis"
 
@@ -21,7 +20,7 @@ export class LookupProcessor extends WorkerHost {
     @Inject(DB_CLIENT) private readonly dbClient: DbClient,
     @Inject(REDIS) private readonly redis: Redis,
     private readonly registry: OsintProviderRegistry,
-    private readonly config: ConfigService,
+    private readonly config: AppConfigService,
   ) {
     super()
   }
@@ -60,7 +59,7 @@ export class LookupProcessor extends WorkerHost {
 
     // Dedicated ioredis connection — pub/sub locks the connection,
     // so it can't share with the cache/health-check Redis client.
-    const cancelSub = new Redis((this.config as unknown as AppConfigService).get("REDIS_URL"), {
+    const cancelSub = new Redis(this.config.get("REDIS_URL"), {
       maxRetriesPerRequest: null,
       lazyConnect: false,
     })
