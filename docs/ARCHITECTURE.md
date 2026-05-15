@@ -91,13 +91,13 @@ Shared workspace packages. Each is independently typecheckable and unit-testable
 |---|---|
 | `@echo/contracts` | Zod schemas + TS types shared across api + worker (DTOs, BullMQ payloads, provider IO). |
 | `@echo/db` | Drizzle schema, migrations, repository functions. Owns the Postgres connection pool. |
-| `@echo/providers` | `OsintProvider` interface, registry, conformance test suite, every provider implementation in subdirs. |
-| `@echo/queue` | BullMQ wiring + per-provider queue config. Provides `@nestjs/bullmq` modules to the worker. |
-| `@echo/cache` | Redis client + multi-tier cache + single-flight lock. |
-| `@echo/http-clients` | Pre-configured outbound HttpClients with retry/timeout/breaker policies per provider. |
+| `@echo/nest` | DI modules hoisted out of the apps: `DbModule`, `RedisModule`, shared tokens. |
+| `@echo/providers` | `OsintProvider` interface, registry, wrappers, real providers (`sherlock`), stub providers, and a `./testing` subpath that re-exports `describeOsintProvider` for consumer test suites. |
+| `@echo/queue` | BullMQ wiring + queue-name builders + Redis key helpers. Provides `@nestjs/bullmq` modules to api/worker. |
 | `@echo/observability` | OpenTelemetry SDK setup, `nestjs-pino` config, Prometheus metric helpers. |
-| `@echo/config` | Env schema (Zod), strongly typed `ConfigService`. |
-| `@echo/testing` | Testcontainers helpers, factory builders for fixtures, in-memory provider stubs. |
+| `@echo/config` | Env schema (Zod), strongly typed `ConfigService` alias. |
+
+Packages mentioned in earlier drafts (`@echo/cache`, `@echo/http-clients`, `@echo/testing`) are not separate packages — caching lives inside `@echo/providers/core/wrappers/with-cache.ts`, HTTP comes from the runtime's `fetch`, and test helpers live next to the code they exercise (vitest's `test/` per package).
 
 ## Data model (canonical)
 
@@ -189,29 +189,36 @@ export type ProviderEvent<R> =
   | { readonly _tag: "Cancelled" }
 ```
 
-Cross-cutting concerns wrapped around every provider by `@echo/providers/core`:
-- **Cache**: query → result by `(id, sha256(canonicalize(q)))` with provider-defined TTL.
-- **Single-flight**: identical concurrent queries collapse to one upstream call.
-- **Concurrency cap**: dedicated BullMQ queue per provider with `defaults.maxConcurrent` workers.
-- **Circuit breaker**: state persisted in `providers` table; opens after N failures, half-opens after M ms.
-- **Rate limit**: token bucket per provider on the outbound HttpClient.
-- **Cancellation**: `AbortSignal` propagated from API → BullMQ → provider implementation.
-- **Tracing**: spans tagged `provider.id`, `provider.category`, `lookup.id`.
-- **Conformance test**: every provider must pass a parameterized test suite (input schema validates known good/bad payloads; cancellation works mid-stream; output decodes a canned response).
+Cross-cutting concerns wrapped around every provider by `@echo/providers/core/wrappers/`:
+
+| Wrapper | Status | What it does |
+|---|---|---|
+| `withTracing` | active | OTel span per `run()`; attributes `provider.id`, `provider.category`, `lookup.id`. |
+| `withCache` | active | Look up `cache:result:<id>:<queryHash>`; on hit yields a synthetic `Started`+`Final`; on miss writes the upstream `Final` back with `defaults.cacheTtlSec` TTL. |
+| `withSingleFlight` | **stub — P9** | Collapse concurrent identical queries via Redis `SET NX PX` + pub/sub. |
+| `withBreaker` | **stub — P9** | State machine persisted in `providers` table; short-circuit when open. |
+| `withRateLimit` | **stub — P9** | Token bucket per provider on outbound HTTP. |
+
+Composition order lives in one place — `apply-wrappers.ts`. The stub wrappers are noop functions today and aren't re-exported until their real implementations land in P9 hardening; the files keep their planned design as module-level comments.
+
+Other concerns covered without a wrapper:
+- **Cancellation**: `AbortSignal` propagated API → Redis pub/sub → worker → provider → outbound fetch → sidecar process kill.
+- **Concurrency cap**: BullMQ queue concurrency; per-provider split lands in P9.
+- **Conformance test**: every provider passes the suite from `@echo/providers/testing` (input schema, event sequencing, output decode).
 
 See [ADR-0005](./adr/0005-osint-provider-abstraction.md).
 
 ## Cross-cutting concerns
 
-### Caching (multi-tier)
+### Caching (today vs planned)
 
-| Layer | Storage | TTL | Purpose |
-|---|---|---|---|
-| L1 | In-process LRU | 10 s | Hot lookup IDs |
-| L2 | Redis | per-provider (1 h – 7 d) | Result cache |
-| L3 | HTTP `Cache-Control` | from L2 TTL | Edge / browser cache |
-| Lock | Redis `SET NX PX` | 30 s | Single-flight |
-| Stream | Redis Streams | 1 h after Final | SSE replay window |
+| Layer | Storage | TTL | Purpose | Status |
+|---|---|---|---|---|
+| Redis result cache | Redis | per-provider (`defaults.cacheTtlSec`) | Result cache (`withCache`) | **active** |
+| Redis Streams | Redis | 1 h after Final | SSE replay window | **active** |
+| In-process LRU | — | 10 s | Hot lookup IDs | planned (P9 if measured) |
+| HTTP `Cache-Control` | edge | from cache TTL | Edge / browser cache | planned (P10/P11) |
+| Single-flight lock | Redis `SET NX PX` | 30 s | Collapse concurrent identical queries | stub (P9) |
 
 See [ADR-0009](./adr/0009-cache-strategy.md).
 

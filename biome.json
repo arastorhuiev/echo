@@ -30,7 +30,15 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "correctness": {
+        "useImportExtensions": {
+          "level": "error",
+          "options": {
+            "forceJsExtensions": true
+          }
+        }
+      }
     }
   },
   "javascript": {
@@ -71,6 +79,36 @@
         "rules": {
           "style": {
             "useImportType": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/api/**", "apps/worker/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useImportExtensions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.module.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noStaticOnlyClass": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/providers/src/core/registry.module.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
           }
         }
       }

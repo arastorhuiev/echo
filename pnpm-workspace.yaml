@@ -21,3 +21,7 @@ allowBuilds:
   # msgpackr-extract is the native msgpack codec used by BullMQ for fast
   # job (de)serialisation. The postinstall builds prebuilt binaries.
   msgpackr-extract: true
+  # simple-git-hooks postinstall installs the .git/hooks/pre-commit shim
+  # from package.json's "simple-git-hooks" block. Without this it falls
+  # back to a manual `pnpm exec simple-git-hooks` step.
+  simple-git-hooks: true

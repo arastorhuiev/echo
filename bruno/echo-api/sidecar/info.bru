@@ -1,0 +1,16 @@
+meta {
+  name: sidecar - info (catalog)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{sidecarBase}}/info
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.sidecar: eq echo-osint-py
+}

@@ -1,0 +1,31 @@
+meta {
+  name: sidecar - sherlock SSE (direct)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{sidecarBase}}/providers/sherlock/run
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+body:json {
+  {
+    "username": "anthropic"
+  }
+}
+
+docs {
+  Direct hit to the Python sidecar — bypasses the Node API. Useful for
+  isolating "is the sidecar healthy?" from "is the pipeline healthy?".
+  Bruno will not stream the response in the UI; use the curl equivalent:
+
+      curl -N -X POST {{sidecarBase}}/providers/sherlock/run \
+        -H 'Content-Type: application/json' \
+        -d '{"username":"anthropic"}'
+}

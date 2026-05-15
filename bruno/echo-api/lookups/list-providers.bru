@@ -1,0 +1,16 @@
+meta {
+  name: providers - list registered
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{apiBase}}/providers
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body: contains sherlock
+}

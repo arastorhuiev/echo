@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "noEmit": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@test/*": ["./test/*"]
     }
   },
   "include": ["src/**/*", "test/**/*"]

@@ -73,7 +73,7 @@ pnpm migrate:check       # verify the migrations folder matches the schema
 # Build a specific app
 pnpm -F @echo/api build
 
-# Bring up the local stack (api + postgres + redis)
+# Bring up the local stack (api + worker + postgres + redis + osint-py)
 cp .env.example .env   # only needed for non-default values
 docker compose up -d --build
 
@@ -84,21 +84,20 @@ curl http://localhost:3000/api/health/live
 # Verify readiness (postgres + redis + sidecar reachable)
 curl http://localhost:3000/api/health/ready
 
+# Run a real lookup through the pipeline (Sherlock via Python sidecar)
+LOOKUP_ID=$(curl -s -X POST http://localhost:3000/api/lookups \
+  -H 'Content-Type: application/json' \
+  -d '{"providerId":"sherlock","query":{"username":"anthropic"}}' \
+  | jq -r .id)
+curl -N http://localhost:3000/api/lookups/$LOOKUP_ID/stream
+# → SSE frames: Started → Partial (per found site) → Final
+
 # OpenAPI document and Swagger UI
 curl http://localhost:3000/api/openapi.json
 open http://localhost:3000/api/docs
 
 # Prometheus metrics
 curl http://localhost:3000/api/metrics
-
-# BullMQ smoke test (dev only — endpoint disabled when NODE_ENV=production)
-# Enqueues a job on q.echo; the worker logs it within ~1 s.
-curl -X POST http://localhost:3000/api/_internal/echo-job \
-  -H "Content-Type: application/json" \
-  -d '{"msg":"hello from api"}'
-# → {"jobId":"<n>","queue":"q.echo"}
-# Then check worker logs:
-docker compose logs worker --tail=5 | grep "Processed job"
 
 # Tail logs (api or worker)
 docker compose logs -f api

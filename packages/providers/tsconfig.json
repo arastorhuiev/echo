@@ -3,19 +3,17 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "dist",
-    "rootDir": "src",
-    "noEmit": false,
-    "declaration": true,
-    "sourceMap": true,
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "verbatimModuleSyntax": false,
     "isolatedModules": false,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@test/*": ["./test/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "src/**/*.test.ts", "src/**/*.int.test.ts"]
+  "include": ["src/**/*", "test/**/*"]
 }

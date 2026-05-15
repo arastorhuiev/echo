@@ -1,0 +1,26 @@
+meta {
+  name: lookups - cancel
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{apiBase}}/lookups/{{lookupId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isDefined
+  res.body.cancelRequested: isBoolean
+}
+
+docs {
+  Publishes to `lookup:cancel:<id>`. The worker's per-job subscriber
+  fires AbortController.abort(); the wrapped provider tears down its
+  outbound fetch; the sidecar observes disconnect and kills the child
+  sherlock subprocess.
+
+  Idempotent: cancelling a terminal lookup returns cancelRequested=false.
+}

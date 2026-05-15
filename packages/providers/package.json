@@ -8,15 +8,19 @@
   "exports": {
     ".": "./dist/index.js",
     "./core": "./dist/core/index.js",
-    "./stubs": "./dist/stubs/index.js"
+    "./sherlock": "./dist/sherlock/index.js",
+    "./stubs": "./dist/stubs/index.js",
+    "./testing": "./dist/testing/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "prepare": "pnpm run build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@echo/config": "workspace:*",
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.4",
     "@opentelemetry/api": "^1.9.0",
     "ioredis": "^5.10.1",
     "zod": "^4.4.3"

@@ -9,7 +9,7 @@
     ".": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "prepare": "pnpm run build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

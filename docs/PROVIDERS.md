@@ -21,13 +21,40 @@
 Covers 6 of 12 categories and exercises all four integration patterns (Python sidecar, Go subprocess, Node-native, hosted API).
 
 ### 1. Sherlock (`username`)
-- **Status:** planned
+- **Status:** implemented (P7, 2026-05-15)
 - **Integration pattern:** Python sidecar
-- **Source:** [`sherlock-project/sherlock`](https://github.com/sherlock-project/sherlock) — Python — MIT
-- **Verified 2026-05-14:** ⭐ 83 320 · last push **2026-05-14** (today) · not archived
+- **Source:** [`sherlock-project/sherlock`](https://github.com/sherlock-project/sherlock) — Python — MIT — pinned `sherlock-project==0.15.0`
+- **Verified 2026-05-14:** ⭐ 83 320 · last push **2026-05-14** · not archived
 - **What it does:** Hunts a username across hundreds of social platforms.
-- **Risks:** scrape-based, ban-prone, benefits from proxy rotation; site list rots — pin a known-good revision in the sidecar `requirements.txt` and bump deliberately.
-- **Defaults (sketch):** `timeoutMs: 60000, maxConcurrent: 4, cacheTtlSec: 86400`
+- **Risks:** scrape-based, ban-prone, benefits from proxy rotation; site list rots — `services/echo-osint-py/pyproject.toml` pins the version, bump deliberately.
+- **Defaults:** `timeoutMs: 60_000, maxConcurrent: 4, cacheTtlSec: 86_400, breaker: { 5, 30_000 }`
+- **Implementation:** `packages/providers/src/sherlock/` (Node-side); `services/echo-osint-py/app/sherlock_runner.py` (sidecar). The sidecar spawns `python -u -m sherlock_project` per request, streams per-site results as `text/event-stream`, terminates the child on client disconnect.
+- **Input:** `{ username: string }` — restricted to `^[A-Za-z0-9._-]{1,50}$` at both edges (Zod in api, regex in sidecar).
+- **Output:** `{ found: Array<{ site, url }>, checked: number }`.
+- **Bruno:** `bruno/echo-api/lookups/create-sherlock.bru` + companion stream/cancel requests.
+
+#### Sample I/O
+
+Request (POST `/api/lookups`):
+
+```json
+{ "providerId": "sherlock", "query": { "username": "anthropic" } }
+```
+
+Response:
+
+```json
+{ "id": "8f3e…-…", "streamUrl": "/api/lookups/8f3e…-…/stream" }
+```
+
+Stream (one `data:` frame per SSE event):
+
+```
+data: {"_tag":"Started"}
+data: {"_tag":"Partial","chunk":{"site":"GitHub","url":"https://github.com/anthropic"}}
+data: {"_tag":"Partial","chunk":{"site":"HackerNews","url":"https://news.ycombinator.com/user?id=anthropic"}}
+data: {"_tag":"Final","data":{"found":[…],"checked":407}}
+```
 
 ### 2. Maigret (`username`)
 - **Status:** planned

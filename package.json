@@ -19,11 +19,16 @@
     "build": "pnpm -r run build",
     "migrate:dev": "pnpm -F @echo/db migrate:dev",
     "migrate:generate": "drizzle-kit generate",
-    "migrate:check": "drizzle-kit check"
+    "migrate:check": "drizzle-kit check",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint && pnpm typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
     "drizzle-kit": "1.0.0-rc.2",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   }
