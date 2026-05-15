@@ -85,9 +85,11 @@ async def run_sherlock(username: str, timeout_s: float = DEFAULT_TIMEOUT_S) -> A
         # Per-site HTTP timeout. Aggressive to keep the long-tail bounded.
         "--timeout",
         "10",
-        # Skip writing per-username .txt to disk. Without --folderoutput we
-        # would create one in cwd; --no-txt suppresses entirely.
-        "--no-txt",
+        # Sherlock 0.15 has no `--no-txt`; it always writes a per-username
+        # txt with the found URLs. Point it at /tmp so it doesn't clutter
+        # the workdir. Container restart wipes /tmp.
+        "--folderoutput",
+        "/tmp",
     ]
 
     logger.info("sherlock start username=%s", username)
