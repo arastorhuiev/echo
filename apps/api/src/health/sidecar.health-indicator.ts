@@ -1,11 +1,15 @@
 import type { AppConfigService } from "@echo/config"
-import { Injectable } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 import { HealthIndicatorService } from "@nestjs/terminus"
 
 @Injectable()
 export class SidecarHealthIndicator {
   constructor(
-    private readonly config: AppConfigService,
+    // `AppConfigService` is a type alias over `ConfigService<EnvSchema, true>`.
+    // It erases to `Object` in decorator metadata, so Nest needs the
+    // explicit @Inject token to resolve the DI graph at runtime.
+    @Inject(ConfigService) private readonly config: AppConfigService,
     private readonly health: HealthIndicatorService,
   ) {}
 

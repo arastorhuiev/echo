@@ -6,6 +6,7 @@ import { applyWrappers, OsintProviderRegistry, ProviderError } from "@echo/provi
 import { type LookupJobData, lookupCancelChannel, lookupEventsKey, Q_LOOKUP } from "@echo/queue"
 import { Processor, WorkerHost } from "@nestjs/bullmq"
 import { Inject, Logger } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 import type { Job } from "bullmq"
 import { Redis } from "ioredis"
 
@@ -25,7 +26,8 @@ export class LookupProcessor extends WorkerHost {
     @Inject(DB_CLIENT) private readonly dbClient: DbClient,
     @Inject(REDIS) private readonly redis: Redis,
     private readonly registry: OsintProviderRegistry,
-    private readonly config: AppConfigService,
+    // AppConfigService is a type alias; see sidecar health indicator for why @Inject is required.
+    @Inject(ConfigService) private readonly config: AppConfigService,
   ) {
     super()
   }

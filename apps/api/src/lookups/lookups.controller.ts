@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Ip,
   NotFoundException,
   Param,
@@ -12,6 +13,7 @@ import {
   Req,
   Res,
 } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 import type { FastifyReply, FastifyRequest } from "fastify"
 import { createZodDto } from "nestjs-zod"
 import { z } from "zod"
@@ -47,7 +49,8 @@ const SSE_HEARTBEAT_MS = 30_000
 export class LookupsController {
   constructor(
     private readonly service: LookupsService,
-    private readonly config: AppConfigService,
+    // See SidecarHealthIndicator for why AppConfigService needs @Inject.
+    @Inject(ConfigService) private readonly config: AppConfigService,
   ) {}
 
   /**
