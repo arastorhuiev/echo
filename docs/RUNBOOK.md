@@ -89,6 +89,71 @@ psql $DATABASE_URL -c "UPDATE providers SET breaker_state='closed', breaker_open
 ### Backup / restore
 *To be populated in P11.* `pg_dump` → B2 / Hetzner Object Storage; restore is `pg_restore` into a fresh DB.
 
+## Proxy gateway
+
+Optional outbound forward proxy for scrape-based OSINT providers (Sherlock, Maigret, etc). Disabled by default — read [`infra/proxy-gw/README.md`](../infra/proxy-gw/README.md) first for the architectural contract.
+
+### Enable in 5 minutes (pass-through)
+
+```bash
+# 1. Start the gateway alongside the rest of the stack.
+docker compose --profile proxy up -d
+
+# 2. Point the sidecar at it.
+#    Edit .env and set:
+#      HTTPS_PROXY=http://proxy-gw:8080
+#      HTTP_PROXY=http://proxy-gw:8080
+#    (Leave NO_PROXY at its default to keep localhost direct.)
+
+# 3. Re-create the sidecar so it picks up the new env.
+docker compose up -d --force-recreate osint-py
+
+# 4. Verify the sidecar is now routing through the gateway.
+docker compose exec osint-py python -c "import os; print('HTTPS_PROXY=', os.environ.get('HTTPS_PROXY'))"
+# → HTTPS_PROXY= http://proxy-gw:8080
+
+# 5. Watch traffic flow.
+docker compose logs -f proxy-gw
+# In another shell, run a Sherlock lookup; you should see tinyproxy CONNECT
+# entries for the social sites it probes.
+```
+
+In pass-through mode the gateway is just a transparent hop — outgoing requests still leave the host's IP. The point of stage one is verifying the wiring before paying anyone.
+
+### Connect an upstream residential provider
+
+Once you've decided you actually need IP rotation (you're seeing site bans, or you're about to scale up Maigret usage):
+
+1. **Pick a provider.** Cheap end (~$5–10/mo starter): [DataImpulse](https://dataimpulse.com), [IPRoyal](https://iproyal.com). Mid-range (~$50–100/mo): [Smartproxy / Decodo](https://smartproxy.com), [Webshare Residential](https://www.webshare.io). All offer pay-as-you-go and month-to-month — start there, not annual contracts.
+2. **Grab your endpoint and credentials.** Provider dashboard gives you something like `gate.smartproxy.com:7000` plus a username and password.
+3. **Uncomment the single-upstream block** in [`infra/proxy-gw/tinyproxy.conf`](../infra/proxy-gw/tinyproxy.conf) and paste your real endpoint:
+   ```
+   upstream http YOUR_USER:YOUR_PASS@gate.smartproxy.com:7000
+   ```
+4. **Restart the gateway** — sidecar stays up:
+   ```bash
+   docker compose --profile proxy restart proxy-gw
+   ```
+5. **Verify** an outbound request egresses from a non-host IP:
+   ```bash
+   docker compose exec osint-py python -c "import requests; print(requests.get('https://api.ipify.org').text)"
+   # → some residential IP from the provider's pool, not your server's IP
+   ```
+
+For per-host bypass (e.g., GitHub direct, Instagram through proxy) or multi-provider round-robin, see the commented templates in `tinyproxy.conf` — same uncomment-and-edit pattern.
+
+### Remove the proxy gateway entirely
+
+When you no longer need any scrape-based provider, the proxy infra can be deleted without touching application code. Full procedure is in [`infra/proxy-gw/README.md`](../infra/proxy-gw/README.md#how-to-remove-the-proxy-cleanly) — short list:
+
+- Delete the `proxy-gw:` service block + sidecar `HTTPS_PROXY/HTTP_PROXY/NO_PROXY` env lines in `docker-compose.yml`.
+- Delete `infra/proxy-gw/` directory.
+- Delete the proxy section in `.env.example`.
+- Delete this RUNBOOK section.
+- Mark P7a as `superseded` in `docs/AGENT_PLAN.md` (don't delete the entry — historical record).
+
+If you find yourself needing to touch any Python / TypeScript / NestJS code during removal, the architectural contract was violated somewhere earlier — fix that first.
+
 ## Incident playbook
 
 *To be populated.* Skeleton:

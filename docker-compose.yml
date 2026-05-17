@@ -97,6 +97,14 @@ services:
       dockerfile: Dockerfile
     container_name: echo-osint-py
     restart: unless-stopped
+    environment:
+      # Outbound proxy wiring — empty by default → sidecar goes direct.
+      # When the "proxy" profile is active AND HTTPS_PROXY is set in .env,
+      # Python's requests/httpx pick this up automatically. The sidecar
+      # itself contains zero proxy-aware code. See infra/proxy-gw/README.md.
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
@@ -105,6 +113,24 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  # ─────────────────────────────────────────────────────────────
+  # Optional infra — disabled by default via compose profiles.
+  # ─────────────────────────────────────────────────────────────
+
+  # Outbound forward proxy for scrape-based OSINT providers (Sherlock, Maigret, …).
+  # OPTIONAL — disabled by default. Activates with: docker compose --profile proxy up
+  # Wholly decoupled from app code: the only contact point is the sidecar's
+  # HTTPS_PROXY env var, which defaults to empty. See infra/proxy-gw/README.md
+  # for the architectural contract and the "how to delete cleanly" checklist.
+  proxy-gw:
+    image: vimagick/tinyproxy:latest
+    container_name: echo-proxy-gw
+    profiles: ["proxy"]
+    restart: unless-stopped
+    volumes:
+      - ./infra/proxy-gw/tinyproxy.conf:/etc/tinyproxy/tinyproxy.conf:ro
+    # No depends_on and no other service depends_on us — the seam stays clean.
 
   # ─────────────────────────────────────────────────────────────
   # Commented out for now — activated by later phases.
