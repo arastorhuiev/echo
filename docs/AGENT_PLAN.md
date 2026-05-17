@@ -321,13 +321,13 @@ These override anything else in this document if there's a conflict. Violating t
   - `OSINT_PY_URL` is now **required** in the env schema (was optional in P3). The api readiness check no longer has a "skipped" branch.
   - `OsintProviderRegistryModule` gained `forRootAsync` so the api/worker can DI-resolve providers from `ConfigService` (Sherlock needs `OSINT_PY_URL`). M1 will need to consider whether Effect-TS would have made this cleaner or added friction.
   - Bruno collection lives at `bruno/echo-api/` — first phase to ship one. Future provider PRs should add a request per provider under `bruno/echo-api/lookups/`.
-  - Proxy posture is **unaddressed** in this phase. P8 must decide before adding Maigret (also scrape-based) whether the shared sidecar needs an outbound proxy pool — failing repeatedly on the same residential IP costs more lookups than it's worth.
+  - Proxy posture: deferred to P7a (split out as a discrete prep phase between M1 and P8 so the proxy infra can be reviewed and removed independently of any provider).
 
 ---
 
 ## M1 — CHECKPOINT: Effect-TS review (between P7 and P8)
 
-**Status:** scheduled
+**Status:** done (2026-05-17, defer again — see [ADR-0006a](./adr/0006a-effect-ts-review-2026-05-17.md))
 **Type:** Milestone / decision checkpoint (not a code-producing phase)
 **Goal:** Decide whether to introduce Effect-TS into the provider abstraction *now* (before mass-adding providers in P8), *later*, or *never*. See [ADR-0006](./adr/0006-effect-ts-deferred.md).
 
@@ -357,6 +357,47 @@ Per owner request: before any work that would commit the codebase to Effect-TS, 
 
 ---
 
+## P7a — Proxy gateway scaffold
+
+**Status:** in progress (branch `phase/p7a-proxy-gateway`)
+**Estimated size:** 0.5 day
+**Goal:** Stand up an optional outbound forward-proxy service (`proxy-gw`) so scrape-based providers in P8 (Maigret) and beyond can route traffic through a paid residential pool when needed — without coupling any application code to the proxy.
+
+### Why split this out of P8
+- Maigret is the first provider that benefits from rotation; making the proxy decision *inside* P8a would couple proxy infra to a specific provider's PR.
+- The owner explicitly asked for the proxy module to be removable without surgery on the rest of the app. Splitting it out makes the "easy remove" promise verifiable: P7a's diff is the exact diff a future revert would touch.
+- Keeps phase-per-PR cadence: this PR is pure infra (no provider code), P8a's PR adds Maigret (no proxy infra changes).
+
+### Inputs
+- M1 done.
+
+### Tasks
+1. `docker-compose.yml`:
+   - Add `proxy-gw` service using `vimagick/tinyproxy` image, gated by `profiles: ["proxy"]` so it doesn't start by default.
+   - Add `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` env wiring on the `osint-py` service with empty defaults via `${VAR:-}`.
+   - **Do not** add `depends_on` in either direction.
+   - **Do not** put `ENV HTTPS_PROXY=` in the sidecar Dockerfile.
+2. `infra/proxy-gw/tinyproxy.conf` — pass-through config (~40 lines) with commented templates for: single upstream provider, multi-provider round-robin, per-host bypass.
+3. `infra/proxy-gw/README.md` — the architectural contract: five rules that keep coupling at zero, plus an exact file/line list for "how to remove cleanly".
+4. `.env.example` — add the three proxy env vars (empty, with a section header pointing at the README).
+5. `docs/RUNBOOK.md` — add a "Proxy gateway" section with two sub-flows: "Enable in 5 minutes (pass-through)" and "Connect an upstream residential provider".
+6. `docs/AGENT_PLAN.md` — this entry.
+
+### Definition of done
+- [ ] `docker compose config` validates with no proxy-gw env set.
+- [ ] `docker compose --profile proxy config` validates with proxy enabled.
+- [ ] `docker compose up -d` (no profile) starts the stack without `proxy-gw`; existing Sherlock end-to-end smoke test still passes (the sidecar's `HTTPS_PROXY` env is empty, so behavior is identical to before).
+- [ ] `docker compose --profile proxy up -d proxy-gw` brings up tinyproxy and it logs that it's listening on `:8080`.
+- [ ] `infra/proxy-gw/README.md` documents the five-rule contract and the clean-removal file/line list.
+- [ ] No Python or TypeScript code is added or modified.
+
+### Notes for next phase
+- The proxy is **off by default in production too** until the owner opts in by setting `HTTPS_PROXY` in the deployment's secret store and starting the `proxy` compose profile. Caddy/reverse-proxy P11 work does not depend on this.
+- Cost preview: $0 in pass-through mode; $5–10/mo for a starter residential provider when scrape-bans start appearing; $100–200/mo at beta-scale (~15k lookups/mo). See `RUNBOOK.md` → "Proxy gateway" for provider links.
+- If the project later drops every scrape-based provider, follow the removal checklist in `infra/proxy-gw/README.md` — single revert, zero application-code changes.
+
+---
+
 ## P8 — Provider catalog rollout
 
 **Status:** not started
@@ -365,6 +406,7 @@ Per owner request: before any work that would commit the codebase to Effect-TS, 
 
 ### Inputs
 - P7 done.
+- P7a done (proxy gateway scaffold available for scrape-based providers).
 - [`PROVIDERS.md`](./PROVIDERS.md) populated by the research pass.
 
 ### Tasks (roughly parallelizable; one branch per provider is fine)
