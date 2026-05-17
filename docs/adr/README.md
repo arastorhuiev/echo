@@ -12,6 +12,7 @@ This directory contains every load-bearing decision made for **echo**, in the st
 | 0004 | [Job queue — BullMQ on Redis](./0004-job-queue.md)                                             | Accepted |
 | 0005 | [OSINT provider abstraction](./0005-osint-provider-abstraction.md)                             | Accepted |
 | 0006 | [Effect-TS deferred](./0006-effect-ts-deferred.md)                                             | Accepted |
+| 0006a | [Effect-TS review — M1 checkpoint (2026-05-17)](./0006a-effect-ts-review-2026-05-17.md)       | Accepted |
 | 0007 | [Real-time progress — Server-Sent Events](./0007-realtime-progress.md)                         | Accepted |
 | 0008 | [Python OSINT sidecar](./0008-python-osint-sidecar.md)                                         | Accepted |
 | 0009 | [Cache strategy — multi-tier with single-flight](./0009-cache-strategy.md)                     | Accepted |
