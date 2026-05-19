@@ -30,6 +30,8 @@ from app.ghunt_runner import DEFAULT_TIMEOUT_S as GHUNT_DEFAULT_TIMEOUT_S
 from app.ghunt_runner import run_ghunt_email
 from app.ignorant_runner import DEFAULT_TIMEOUT_S as IGNORANT_DEFAULT_TIMEOUT_S
 from app.ignorant_runner import IgnorantEvent, run_ignorant
+from app.mailcat_runner import DEFAULT_TIMEOUT_S as MAILCAT_DEFAULT_TIMEOUT_S
+from app.mailcat_runner import MailcatEvent, run_mailcat
 from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
 from app.maigret_runner import MaigretEvent, run_maigret
 from app.phoneinfoga_runner import DEFAULT_TIMEOUT_S as PHONEINFOGA_DEFAULT_TIMEOUT_S
@@ -98,6 +100,10 @@ class IgnorantQuery(BaseModel):
 
 class GhuntEmailQuery(BaseModel):
     email: str = Field(min_length=3, max_length=254)
+
+
+class MailcatQuery(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
 
 
 class GhuntEmailResponse(BaseModel):
@@ -275,6 +281,11 @@ def info() -> SidecarInfo:
                 category="email",
                 description="Email → Google profile / Maps reviews — env-conditional (GHunt, AGPL subprocess).",
             ),
+            ProviderInfo(
+                id="mailcat",
+                category="username",
+                description="Username → existing email addresses — env-conditional (sharsil/mailcat).",
+            ),
         ],
     )
 
@@ -419,6 +430,34 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
     )
 
 
+@app.post("/providers/mailcat/run")
+async def mailcat_run(
+    body: MailcatQuery,
+    timeout_s: float = Query(default=MAILCAT_DEFAULT_TIMEOUT_S, gt=0, le=180),
+) -> StreamingResponse:
+    """Run mailcat on the given username and stream per-provider events.
+
+    Env-conditional. Without MAILCAT_INSTALL_PATH the runner yields a
+    single `error` event the consumer surfaces as a Final.
+    """
+
+    async def stream() -> AsyncIterator[bytes]:
+        try:
+            async for event in run_mailcat(body.username, timeout_s=timeout_s):
+                yield _mailcat_to_sse(event)
+                await anyio.sleep(0)
+        except Exception as err:  # noqa: BLE001
+            logger.exception("mailcat runner crashed")
+            yield _mailcat_to_sse(MailcatEvent(kind="error", message=str(err)))
+
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+
 @app.post("/providers/ghunt/run", response_model=GhuntEmailResponse)
 async def ghunt_run(
     body: GhuntEmailQuery,
@@ -491,6 +530,23 @@ async def socid_extractor_run(
         fields=dict(result.fields),
         error=result.error,
     )
+
+
+def _mailcat_to_sse(event: MailcatEvent) -> bytes:
+    """Serialize one MailcatEvent as an SSE `data:` frame."""
+
+    payload: dict[str, object] = {"kind": event.kind}
+    if event.username is not None:
+        payload["username"] = event.username
+    if event.email is not None:
+        payload["email"] = event.email
+    if event.exists is not None:
+        payload["exists"] = event.exists
+    if event.checked is not None:
+        payload["checked"] = event.checked
+    if event.message is not None:
+        payload["message"] = event.message
+    return f"data: {json.dumps(payload, separators=(',', ':'))}\n\n".encode()
 
 
 def _ignorant_to_sse(event: IgnorantEvent) -> bytes:

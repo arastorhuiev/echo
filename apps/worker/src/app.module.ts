@@ -13,7 +13,9 @@ import {
   IGNORANT_PROVIDER,
   IgnorantProviderModule,
   MAIGRET_PROVIDER,
+  MAILCAT_PROVIDER,
   MaigretProviderModule,
+  MailcatProviderModule,
   type OsintProvider,
   OsintProviderRegistryModule,
   PHONEINFOGA_PROVIDER,
@@ -72,6 +74,7 @@ const isProd = process.env.NODE_ENV === "production"
         SocidExtractorProviderModule.forRoot(),
         IgnorantProviderModule.forRoot(),
         GhuntProviderModule.forRoot(),
+        MailcatProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -88,6 +91,7 @@ const isProd = process.env.NODE_ENV === "production"
         SOCID_EXTRACTOR_PROVIDER,
         IGNORANT_PROVIDER,
         GHUNT_PROVIDER,
+        MAILCAT_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -104,6 +108,7 @@ const isProd = process.env.NODE_ENV === "production"
         socidExtractor: OsintProvider,
         ignorant: OsintProvider,
         ghunt: OsintProvider,
+        mailcat: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -120,6 +125,7 @@ const isProd = process.env.NODE_ENV === "production"
           socidExtractor,
           ignorant,
           ghunt,
+          mailcat,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },
