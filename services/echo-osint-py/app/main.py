@@ -34,6 +34,10 @@ from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
 from app.socialscan_runner import DEFAULT_TIMEOUT_S as SOCIALSCAN_DEFAULT_TIMEOUT_S
 from app.socialscan_runner import SocialscanEvent, run_socialscan
+from app.telegram_runner import DEFAULT_TIMEOUT_S as TELEGRAM_DEFAULT_TIMEOUT_S
+from app.telegram_runner import run_telegram_resolve
+from app.truecaller_runner import DEFAULT_TIMEOUT_S as TRUECALLER_DEFAULT_TIMEOUT_S
+from app.truecaller_runner import run_truecaller
 
 logger = logging.getLogger("echo.main")
 
@@ -97,6 +101,61 @@ class PhoneinfogaResponse(BaseModel):
     error: str | None
 
 
+class TelegramResolveQuery(BaseModel):
+    phone: str = Field(min_length=1, max_length=PHONE_MAX_LEN)
+
+
+class TelegramResolveResponse(BaseModel):
+    configured: bool
+    found_on_telegram: bool
+    user_id: int | None = None
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    about: str | None = None
+    status: str | None = None
+    is_premium: bool | None = None
+    is_bot: bool | None = None
+    is_verified: bool | None = None
+    is_scam: bool | None = None
+    is_fake: bool | None = None
+    photo_url: str | None = None
+    error: str | None = None
+
+
+class TruecallerQuery(BaseModel):
+    phone: str = Field(min_length=1, max_length=PHONE_MAX_LEN)
+    country_code: str | None = Field(default=None, max_length=8)
+
+
+class TruecallerAddressResponse(BaseModel):
+    city: str
+    country_code: str
+    address: str
+
+
+class TruecallerSpamResponse(BaseModel):
+    spam_score: int
+    spam_type: str | None
+
+
+class TruecallerResponse(BaseModel):
+    configured: bool
+    found: bool
+    name: str | None = None
+    alt_name: str | None = None
+    image_url: str | None = None
+    gender: str | None = None
+    addresses: list[TruecallerAddressResponse] = []
+    emails: list[str] = []
+    tags: list[str] = []
+    spam_info: TruecallerSpamResponse | None = None
+    score: float | None = None
+    access: str | None = None
+    enhanced: bool | None = None
+    error: str | None = None
+
+
 class PhonenumbersResponse(BaseModel):
     valid: bool
     possible: bool
@@ -148,6 +207,16 @@ def info() -> SidecarInfo:
                 id="phoneinfoga",
                 category="phone",
                 description="Phone scanner — Go CLI, returns local-scanner metadata + Google dorks.",
+            ),
+            ProviderInfo(
+                id="telegram-resolve",
+                category="phone",
+                description="Telegram MTProto phone→profile resolver — env-conditional (Telethon).",
+            ),
+            ProviderInfo(
+                id="truecaller",
+                category="phone",
+                description="Truecaller phone→identity lookup — env-conditional (truecallerpy).",
             ),
         ],
     )
@@ -317,6 +386,75 @@ def _socialscan_to_sse(event: SocialscanEvent) -> bytes:
     if event.checked is not None:
         payload["checked"] = event.checked
     return f"data: {json.dumps(payload, separators=(',', ':'))}\n\n".encode()
+
+
+@app.post("/providers/telegram-resolve/run", response_model=TelegramResolveResponse)
+async def telegram_resolve_run(
+    body: TelegramResolveQuery,
+    timeout_s: float = Query(default=TELEGRAM_DEFAULT_TIMEOUT_S, gt=0, le=120),
+) -> TelegramResolveResponse:
+    """Resolve a phone to a Telegram profile. Env-conditional.
+
+    Returns 200 in all paths — the `configured` + `error` fields
+    communicate "not provisioned" vs real Telethon failures.
+    """
+
+    result = await run_telegram_resolve(body.phone, timeout_s=timeout_s)
+    return TelegramResolveResponse(
+        configured=result.configured,
+        found_on_telegram=result.found_on_telegram,
+        user_id=result.user_id,
+        username=result.username,
+        first_name=result.first_name,
+        last_name=result.last_name,
+        about=result.about,
+        status=result.status,
+        is_premium=result.is_premium,
+        is_bot=result.is_bot,
+        is_verified=result.is_verified,
+        is_scam=result.is_scam,
+        is_fake=result.is_fake,
+        photo_url=result.photo_url,
+        error=result.error,
+    )
+
+
+@app.post("/providers/truecaller/run", response_model=TruecallerResponse)
+async def truecaller_run(
+    body: TruecallerQuery,
+    timeout_s: float = Query(default=TRUECALLER_DEFAULT_TIMEOUT_S, gt=0, le=60),
+) -> TruecallerResponse:
+    """Truecaller phone→identity lookup. Env-conditional."""
+
+    result = await run_truecaller(body.phone, body.country_code, timeout_s=timeout_s)
+    return TruecallerResponse(
+        configured=result.configured,
+        found=result.found,
+        name=result.name,
+        alt_name=result.alt_name,
+        image_url=result.image_url,
+        gender=result.gender,
+        addresses=[
+            TruecallerAddressResponse(
+                city=a.city, country_code=a.country_code, address=a.address
+            )
+            for a in result.addresses
+        ],
+        emails=result.emails,
+        tags=result.tags,
+        spam_info=(
+            TruecallerSpamResponse(
+                spam_score=result.spam_info.spam_score,
+                spam_type=result.spam_info.spam_type,
+            )
+            if result.spam_info is not None
+            else None
+        ),
+        score=result.score,
+        access=result.access,
+        enhanced=result.enhanced,
+        error=result.error,
+    )
 
 
 def _to_sse(event: SherlockEvent | MaigretEvent) -> bytes:

@@ -21,6 +21,10 @@ import {
   SOCIALSCAN_PROVIDER,
   SocialscanProviderModule,
   STUB_PROVIDERS,
+  TELEGRAM_RESOLVE_PROVIDER,
+  TelegramResolveProviderModule,
+  TRUECALLER_PROVIDER,
+  TruecallerProviderModule,
   WHATSMYNAME_PROVIDER,
   WhatsmynameProviderModule,
 } from "@echo/providers"
@@ -66,6 +70,8 @@ const isProd = process.env.NODE_ENV === "production"
         MaigretProviderModule.forRoot(),
         SocialscanProviderModule.forRoot(),
         PhoneinfogaProviderModule.forRoot(),
+        TelegramResolveProviderModule.forRoot(),
+        TruecallerProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -77,6 +83,8 @@ const isProd = process.env.NODE_ENV === "production"
         MAIGRET_PROVIDER,
         SOCIALSCAN_PROVIDER,
         PHONEINFOGA_PROVIDER,
+        TELEGRAM_RESOLVE_PROVIDER,
+        TRUECALLER_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -88,6 +96,8 @@ const isProd = process.env.NODE_ENV === "production"
         maigret: OsintProvider,
         socialscan: OsintProvider,
         phoneinfoga: OsintProvider,
+        telegramResolve: OsintProvider,
+        truecaller: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -99,6 +109,8 @@ const isProd = process.env.NODE_ENV === "production"
           maigret,
           socialscan,
           phoneinfoga,
+          telegramResolve,
+          truecaller,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },

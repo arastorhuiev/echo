@@ -23,6 +23,14 @@ dependencies = [
     # across ~10 platforms. CLI invocation, writes JSON to a temp file
     # we slurp after exit; no native streaming.
     "socialscan==2.0.1",
+    # Telethon — MTProto client. Used only when TELEGRAM_API_ID/_HASH/
+    # _SESSION_PATH env vars are present. Hosted on Codeberg upstream
+    # (the GitHub mirror was archived 2026-02); PyPI publication is
+    # unaffected.
+    "telethon==1.39.0",
+    # Truecaller unofficial wrapper. Used only when
+    # TRUECALLER_INSTALLATION_ID env var is set.
+    "truecallerpy==0.1.6",
 ]
 
 [project.optional-dependencies]
