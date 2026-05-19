@@ -16,6 +16,8 @@ import {
   PhonenumbersProviderModule,
   SHERLOCK_PROVIDER,
   SherlockProviderModule,
+  SOCIALSCAN_PROVIDER,
+  SocialscanProviderModule,
   STUB_PROVIDERS,
   WHATSMYNAME_PROVIDER,
   WhatsmynameProviderModule,
@@ -60,6 +62,7 @@ const isProd = process.env.NODE_ENV === "production"
         WhatsmynameProviderModule.forRoot(),
         PhonenumbersProviderModule.forRoot(),
         MaigretProviderModule.forRoot(),
+        SocialscanProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -69,6 +72,7 @@ const isProd = process.env.NODE_ENV === "production"
         WHATSMYNAME_PROVIDER,
         PHONENUMBERS_PROVIDER,
         MAIGRET_PROVIDER,
+        SOCIALSCAN_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -78,8 +82,18 @@ const isProd = process.env.NODE_ENV === "production"
         whatsmyname: OsintProvider,
         phonenumbers: OsintProvider,
         maigret: OsintProvider,
+        socialscan: OsintProvider,
       ) => {
-        const real = [sherlock, gravatar, hibp, emailrep, whatsmyname, phonenumbers, maigret]
+        const real = [
+          sherlock,
+          gravatar,
+          hibp,
+          emailrep,
+          whatsmyname,
+          phonenumbers,
+          maigret,
+          socialscan,
+        ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },
     }),

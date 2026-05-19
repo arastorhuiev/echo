@@ -30,6 +30,8 @@ from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
 from app.maigret_runner import MaigretEvent, run_maigret
 from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
+from app.socialscan_runner import DEFAULT_TIMEOUT_S as SOCIALSCAN_DEFAULT_TIMEOUT_S
+from app.socialscan_runner import SocialscanEvent, run_socialscan
 
 logger = logging.getLogger("echo.main")
 
@@ -63,6 +65,12 @@ class SherlockQuery(BaseModel):
 
 class MaigretQuery(BaseModel):
     username: str = Field(min_length=1, max_length=50)
+
+
+class SocialscanQuery(BaseModel):
+    # socialscan accepts a mixed list of usernames + emails; the API
+    # caller is responsible for pre-validating both forms.
+    queries: list[str] = Field(min_length=1, max_length=10)
 
 
 class PhonenumbersQuery(BaseModel):
@@ -110,6 +118,11 @@ def info() -> SidecarInfo:
                 id="maigret",
                 category="username",
                 description="Username hunting across ~3000 sites — broader corpus than Sherlock.",
+            ),
+            ProviderInfo(
+                id="socialscan",
+                category="username",
+                description="Username/email availability check across ~10 social platforms.",
             ),
         ],
     )
@@ -175,6 +188,28 @@ async def maigret_run(
     return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
 
 
+@app.post("/providers/socialscan/run")
+async def socialscan_run(
+    body: SocialscanQuery,
+    timeout_s: float = Query(default=SOCIALSCAN_DEFAULT_TIMEOUT_S, gt=0, le=300),
+) -> StreamingResponse:
+    async def stream() -> AsyncIterator[bytes]:
+        try:
+            async for event in run_socialscan(body.queries, timeout_s=timeout_s):
+                yield _socialscan_to_sse(event)
+                await anyio.sleep(0)
+        except Exception as err:  # noqa: BLE001
+            logger.exception("socialscan runner crashed")
+            yield _socialscan_to_sse(SocialscanEvent(kind="error", message=str(err)))
+
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+
 @app.post("/providers/phonenumbers/run", response_model=PhonenumbersResponse)
 def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
     """Synchronous in-process libphonenumber lookup.
@@ -199,6 +234,32 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
         timezones=result.timezones,
         parse_error=result.parse_error,
     )
+
+
+def _socialscan_to_sse(event: SocialscanEvent) -> bytes:
+    """Serialize one SocialscanEvent as an SSE `data:` frame.
+
+    socialscan events carry an extra per-platform shape (available /
+    valid / success booleans) the Sherlock/Maigret helper doesn't know
+    about, so this one stays separate.
+    """
+
+    payload: dict[str, object] = {"kind": event.kind}
+    if event.query is not None:
+        payload["query"] = event.query
+    if event.platform is not None:
+        payload["platform"] = event.platform
+    if event.available is not None:
+        payload["available"] = event.available
+    if event.valid is not None:
+        payload["valid"] = event.valid
+    if event.success is not None:
+        payload["success"] = event.success
+    if event.message is not None:
+        payload["message"] = event.message
+    if event.checked is not None:
+        payload["checked"] = event.checked
+    return f"data: {json.dumps(payload, separators=(',', ':'))}\n\n".encode()
 
 
 def _to_sse(event: SherlockEvent | MaigretEvent) -> bytes:

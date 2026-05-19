@@ -19,6 +19,10 @@ dependencies = [
     # Maigret — username scanner with ~3k site corpus (superset of
     # Sherlock). Invoked as `python -u -m maigret`, NDJSON streaming.
     "maigret==0.6.1",
+    # socialscan — availability check ("can I register `jdoe` here?")
+    # across ~10 platforms. CLI invocation, writes JSON to a temp file
+    # we slurp after exit; no native streaming.
+    "socialscan==2.0.1",
 ]
 
 [project.optional-dependencies]
