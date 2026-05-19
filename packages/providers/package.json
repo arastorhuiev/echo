@@ -10,10 +10,11 @@
     "./core": "./dist/core/index.js",
     "./sherlock": "./dist/sherlock/index.js",
     "./stubs": "./dist/stubs/index.js",
-    "./testing": "./dist/testing/index.js"
+    "./testing": "./dist/testing/index.js",
+    "./whatsmyname": "./dist/whatsmyname/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json && cp src/whatsmyname/wmn-data.json dist/whatsmyname/wmn-data.json",
     "prepare": "pnpm run build",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

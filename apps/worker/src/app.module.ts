@@ -13,6 +13,8 @@ import {
   SHERLOCK_PROVIDER,
   SherlockProviderModule,
   STUB_PROVIDERS,
+  WHATSMYNAME_PROVIDER,
+  WhatsmynameProviderModule,
 } from "@echo/providers"
 import { forRootBullModule } from "@echo/queue"
 import { Module } from "@nestjs/common"
@@ -42,15 +44,23 @@ const isProd = process.env.NODE_ENV === "production"
         GravatarProviderModule.forRoot(),
         HibpProviderModule.forRoot(),
         EmailrepProviderModule.forRoot(),
+        WhatsmynameProviderModule.forRoot(),
       ],
-      inject: [SHERLOCK_PROVIDER, GRAVATAR_PROVIDER, HIBP_PROVIDER, EMAILREP_PROVIDER],
+      inject: [
+        SHERLOCK_PROVIDER,
+        GRAVATAR_PROVIDER,
+        HIBP_PROVIDER,
+        EMAILREP_PROVIDER,
+        WHATSMYNAME_PROVIDER,
+      ],
       useFactory: (
         sherlock: OsintProvider,
         gravatar: OsintProvider,
         hibp: OsintProvider,
         emailrep: OsintProvider,
+        whatsmyname: OsintProvider,
       ) => {
-        const real = [sherlock, gravatar, hibp, emailrep]
+        const real = [sherlock, gravatar, hibp, emailrep, whatsmyname]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },
     }),
