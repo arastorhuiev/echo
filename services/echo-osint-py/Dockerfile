@@ -61,6 +61,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         wget \
         tini \
+        libimage-exiftool-perl \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 1001 osint \
     && useradd --system --uid 1001 --gid osint --home /app osint

@@ -26,6 +26,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.exiftool_runner import DEFAULT_TIMEOUT_S as EXIFTOOL_DEFAULT_TIMEOUT_S
+from app.exiftool_runner import run_exiftool
 from app.ghunt_runner import DEFAULT_TIMEOUT_S as GHUNT_DEFAULT_TIMEOUT_S
 from app.ghunt_runner import run_ghunt_email
 from app.ignorant_runner import DEFAULT_TIMEOUT_S as IGNORANT_DEFAULT_TIMEOUT_S
@@ -104,6 +106,34 @@ class GhuntEmailQuery(BaseModel):
 
 class MailcatQuery(BaseModel):
     username: str = Field(min_length=1, max_length=64)
+
+
+class ExiftoolQuery(BaseModel):
+    image_url: str = Field(min_length=1, max_length=2048)
+
+
+class ExiftoolResponse(BaseModel):
+    found: bool
+    file_type: str | None = None
+    mime_type: str | None = None
+    width: int | None = None
+    height: int | None = None
+    make: str | None = None
+    model: str | None = None
+    lens_model: str | None = None
+    software: str | None = None
+    date_taken: str | None = None
+    gps_latitude: str | None = None
+    gps_longitude: str | None = None
+    gps_altitude: str | None = None
+    gps_date: str | None = None
+    byline: str | None = None
+    credit: str | None = None
+    source: str | None = None
+    copyright: str | None = None
+    creator: str | None = None
+    rights: str | None = None
+    error: str | None = None
 
 
 class GhuntEmailResponse(BaseModel):
@@ -286,6 +316,11 @@ def info() -> SidecarInfo:
                 category="username",
                 description="Username → existing email addresses — env-conditional (sharsil/mailcat).",
             ),
+            ProviderInfo(
+                id="exiftool",
+                category="image",
+                description="Image URL → EXIF / IPTC / XMP metadata (Phil Harvey ExifTool subprocess).",
+            ),
         ],
     )
 
@@ -427,6 +462,45 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
         geocoded_location=result.geocoded_location,
         timezones=result.timezones,
         parse_error=result.parse_error,
+    )
+
+
+@app.post("/providers/exiftool/run", response_model=ExiftoolResponse)
+async def exiftool_run(
+    body: ExiftoolQuery,
+    timeout_s: float = Query(default=EXIFTOOL_DEFAULT_TIMEOUT_S, gt=0, le=120),
+) -> ExiftoolResponse:
+    """Download `image_url` to a temp file and run exiftool on it.
+
+    Synchronous JSON shape — exiftool only flushes at end-of-process
+    anyway. Returns 200 in all paths; download failures, oversize
+    images, and exiftool subprocess errors land in `error` rather than
+    bubbling 5xx.
+    """
+
+    result = await run_exiftool(body.image_url, timeout_s=timeout_s)
+    return ExiftoolResponse(
+        found=result.found,
+        file_type=result.file_type,
+        mime_type=result.mime_type,
+        width=result.width,
+        height=result.height,
+        make=result.make,
+        model=result.model,
+        lens_model=result.lens_model,
+        software=result.software,
+        date_taken=result.date_taken,
+        gps_latitude=result.gps_latitude,
+        gps_longitude=result.gps_longitude,
+        gps_altitude=result.gps_altitude,
+        gps_date=result.gps_date,
+        byline=result.byline,
+        credit=result.credit,
+        source=result.source,
+        copyright=result.copyright,
+        creator=result.creator,
+        rights=result.rights,
+        error=result.error,
     )
 
 

@@ -4,6 +4,8 @@ import { buildLoggerConfig } from "@echo/observability"
 import {
   EMAILREP_PROVIDER,
   EmailrepProviderModule,
+  EXIFTOOL_PROVIDER,
+  ExiftoolProviderModule,
   GHUNT_PROVIDER,
   GhuntProviderModule,
   GRAVATAR_PROVIDER,
@@ -22,6 +24,8 @@ import {
   PHONENUMBERS_PROVIDER,
   PhoneinfogaProviderModule,
   PhonenumbersProviderModule,
+  SAUCENAO_PROVIDER,
+  SaucenaoProviderModule,
   SHERLOCK_PROVIDER,
   SherlockProviderModule,
   SOCIALSCAN_PROVIDER,
@@ -75,6 +79,8 @@ const isProd = process.env.NODE_ENV === "production"
         IgnorantProviderModule.forRoot(),
         GhuntProviderModule.forRoot(),
         MailcatProviderModule.forRoot(),
+        SaucenaoProviderModule.forRoot(),
+        ExiftoolProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -92,6 +98,8 @@ const isProd = process.env.NODE_ENV === "production"
         IGNORANT_PROVIDER,
         GHUNT_PROVIDER,
         MAILCAT_PROVIDER,
+        SAUCENAO_PROVIDER,
+        EXIFTOOL_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -109,6 +117,8 @@ const isProd = process.env.NODE_ENV === "production"
         ignorant: OsintProvider,
         ghunt: OsintProvider,
         mailcat: OsintProvider,
+        saucenao: OsintProvider,
+        exiftool: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -126,6 +136,8 @@ const isProd = process.env.NODE_ENV === "production"
           ignorant,
           ghunt,
           mailcat,
+          saucenao,
+          exiftool,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },
