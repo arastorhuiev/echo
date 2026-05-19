@@ -1,0 +1,33 @@
+meta {
+  name: sidecar - truecaller JSON (direct)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{sidecarBase}}/providers/truecaller/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "phone": "+442079460958",
+    "country_code": "GB"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.configured: isBoolean
+  res.body.found: isBoolean
+}
+
+docs {
+  Env-conditional direct hit. Without TRUECALLER_INSTALLATION_ID set,
+  returns `configured: false`. With it set, calls truecallerpy's
+  `search_phonenumber` and normalises the response.
+
+  HTTP-401 errors in `error` ⇒ the installationId has been
+  invalidated; re-run the SMS login flow with a fresh disposable SIM.
+}

@@ -1,0 +1,30 @@
+meta {
+  name: sidecar - phonenumbers JSON (direct)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{sidecarBase}}/providers/phonenumbers/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "phone": "+442079460958"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.valid: isBoolean
+  res.body.country_code: isDefined
+}
+
+docs {
+  Direct sync JSON hit to the sidecar (no SSE). Useful for isolating
+  "is libphonenumber working?" from "is the Node pipeline healthy?".
+  Invalid input returns 200 with `valid: false` + a `parse_error`
+  string — only catastrophic crashes surface as 5xx.
+}

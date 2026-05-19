@@ -1,0 +1,30 @@
+meta {
+  name: sidecar - socid-extractor JSON (direct)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{sidecarBase}}/providers/socid-extractor/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "url": "https://t.me/durov"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.found: isBoolean
+  res.body.fields: isDefined
+}
+
+docs {
+  Direct hit to the in-process socid_extractor runner. Sidecar fetches
+  the URL via httpx, hands the HTML to socid_extractor.extract(), then
+  normalises stringified Python lists (`"['a','b']"`) into real arrays.
+  Network/parser failures land in `error` rather than 5xx.
+}

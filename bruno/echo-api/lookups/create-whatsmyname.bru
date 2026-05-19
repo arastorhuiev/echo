@@ -1,0 +1,37 @@
+meta {
+  name: lookups - create (whatsmyname anthropic)
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "whatsmyname",
+    "query": {
+      "username": "anthropic"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Node-native HTTP fan-out over the vendored CC-BY-SA dataset (~732 sites,
+  pinned at upstream cf3346c5). Streams Partial per FOUND site; Final
+  carries the full list + checked/total counts. ~30-60s wall-clock
+  end-to-end depending on the long tail.
+}

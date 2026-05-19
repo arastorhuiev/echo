@@ -1,0 +1,41 @@
+meta {
+  name: lookups - create (hibp-pwned-passwords password123)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "hibp-pwned-passwords",
+    "query": {
+      "password": "password123"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  k-anonymity password check. The body's `password` is SHA-1'd locally;
+  only the first 5 hex chars of the hash leave the process — the raw
+  password never crosses a network boundary. `password123` is a known
+  weak password and should return a high breach_count.
+
+  Don't run this against a real personal password from Bruno — the
+  request body is logged in Bruno's request panel. Use the standard
+  password-strength wisdom: pick a placeholder or use the curl invocation.
+}

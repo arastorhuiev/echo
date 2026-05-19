@@ -1,0 +1,40 @@
+meta {
+  name: lookups - create (exiftool EXIF metadata)
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "exiftool",
+    "query": {
+      "image_url": "https://raw.githubusercontent.com/ianare/exif-samples/master/jpg/gps/DSCN0010.jpg"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Downloads the image (cap: 32 MiB) into a sidecar tmp file then runs
+  the exiftool Perl binary on it. The sample URL above is from ianare's
+  classic EXIF samples set — has GPS coords, Nikon camera info, and
+  IPTC byline data. Substitute any public image URL.
+
+  GPS lat/lon arrive as strings in exiftool's native format
+  (`37 deg 24' 35.40" N`); the UI parses them.
+}

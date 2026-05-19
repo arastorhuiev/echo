@@ -1,0 +1,31 @@
+meta {
+  name: sidecar - ghunt JSON (direct)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{sidecarBase}}/providers/ghunt/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "jane@example.com"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.configured: isBoolean
+  res.body.found: isBoolean
+}
+
+docs {
+  Env-conditional direct hit. Without GHUNT_CREDS_PATH set + the
+  creds.m file actually present at that path, returns
+  `configured: false`. With both, spawns `ghunt email <addr> --json
+  <tmpfile>` as a subprocess and normalises the verbose JSON dump into
+  a slim profile.
+}

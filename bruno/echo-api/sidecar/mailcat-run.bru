@@ -1,0 +1,28 @@
+meta {
+  name: sidecar - mailcat SSE (direct)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{sidecarBase}}/providers/mailcat/run
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+body:json {
+  {
+    "username": "anthropic"
+  }
+}
+
+docs {
+  Env-conditional. Without MAILCAT_INSTALL_PATH pointing at a cloned
+  sharsil/mailcat repo, the SSE stream carries a single `error` event
+  ("not configured ..."). With it, streams per-provider `[+]` / `[-]`
+  result lines parsed off mailcat.py's stdout.
+}

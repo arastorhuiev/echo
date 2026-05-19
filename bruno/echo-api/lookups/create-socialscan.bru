@@ -1,0 +1,38 @@
+meta {
+  name: lookups - create (socialscan anthropic)
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "socialscan",
+    "query": {
+      "queries": ["anthropic"]
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Availability check across ~10 platforms. Semantics flip from
+  Sherlock/Maigret: `available: false` ⇒ the handle is TAKEN on that
+  platform — that's the positive signal we surface as
+  "exists-elsewhere". `queries` accepts a mix of usernames and email
+  addresses (1-10 entries).
+}

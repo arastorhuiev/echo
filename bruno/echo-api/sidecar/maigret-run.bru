@@ -1,0 +1,30 @@
+meta {
+  name: sidecar - maigret SSE (direct)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{sidecarBase}}/providers/maigret/run
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+body:json {
+  {
+    "username": "anthropic"
+  }
+}
+
+docs {
+  Direct hit to the maigret subprocess runner. Bruno can't stream SSE
+  in the UI — use curl to watch frames arrive:
+
+      curl -N -X POST {{sidecarBase}}/providers/maigret/run \
+        -H 'Content-Type: application/json' \
+        -d '{"username":"anthropic"}'
+}

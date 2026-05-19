@@ -1,0 +1,38 @@
+meta {
+  name: lookups - create (socid-extractor t.me/durov)
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "socid-extractor",
+    "query": {
+      "url": "https://t.me/durov"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Designed as a post-processor: feed it URLs that Sherlock / Maigret /
+  WhatsMyName surfaced and pull out platform-native IDs (Telegram
+  user_id, VK profile id, GitHub commit emails, …). One URL in, one
+  Final with `fields: {...}` out. Field values are heterogeneous
+  (string / number / bool / array-of-strings).
+}

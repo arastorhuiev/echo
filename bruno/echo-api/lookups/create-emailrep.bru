@@ -1,0 +1,39 @@
+meta {
+  name: lookups - create (emailrep jane@example.com)
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "emailrep",
+    "query": {
+      "email": "jane@example.com"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  HTTP-fetch provider on the free unauthenticated tier. EmailRep always
+  returns 200 with a populated body; `reputation: "none"` is the "we
+  know nothing" answer, surfaced as a normal Final.
+
+  When you start hitting rate-limits, register at emailrep.io for a
+  free key and add `EMAILREP_API_KEY` to .env to bump the quota.
+}

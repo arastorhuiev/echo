@@ -1,0 +1,28 @@
+meta {
+  name: sidecar - socialscan SSE (direct)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{sidecarBase}}/providers/socialscan/run
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+body:json {
+  {
+    "queries": ["anthropic"]
+  }
+}
+
+docs {
+  Direct hit to socialscan's subprocess+JSON-file runner. SSE streams
+  one `result` event per platform after the underlying socialscan
+  process exits (no true incremental streaming — socialscan only
+  flushes its output file on completion).
+}

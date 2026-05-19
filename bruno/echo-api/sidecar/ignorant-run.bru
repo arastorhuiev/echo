@@ -1,0 +1,29 @@
+meta {
+  name: sidecar - ignorant SSE (direct)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{sidecarBase}}/providers/ignorant/run
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+body:json {
+  {
+    "country_code": "33",
+    "phone": "644637111"
+  }
+}
+
+docs {
+  Direct hit to the ignorant subprocess runner. Streams one `result`
+  event per platform (instagram, snapchat, amazon). Note the input
+  form: `country_code` is the dialling code WITHOUT the `+`, matching
+  ignorant's positional CLI convention.
+}

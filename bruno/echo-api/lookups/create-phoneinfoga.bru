@@ -1,0 +1,36 @@
+meta {
+  name: lookups - create (phoneinfoga +44 UK)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "phoneinfoga",
+    "query": {
+      "phone": "+442079460958"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Spawns the phoneinfoga v2.11.0 Go binary in the sidecar. Result is a
+  Final with local-scanner metadata (carrier/line type) plus ~5-10
+  Google dork URLs. Sidecar boot ~250-500ms; expect ~2s wall-clock.
+}

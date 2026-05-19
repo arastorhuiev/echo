@@ -1,0 +1,38 @@
+meta {
+  name: lookups - create (gravatar jane@example.com)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "gravatar",
+    "query": {
+      "email": "jane@example.com"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  HTTP-fetch provider, no sidecar dependency. SHA-256 hashes the
+  trimmed lower-cased email and queries Gravatar's REST v3 API.
+  `jane@example.com` has no Gravatar registered, so the Final's
+  `found: false` is the expected happy path. Substitute a real email
+  to see a populated profile.
+}

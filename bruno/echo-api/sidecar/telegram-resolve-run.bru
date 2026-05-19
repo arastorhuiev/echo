@@ -1,0 +1,31 @@
+meta {
+  name: sidecar - telegram-resolve JSON (direct)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{sidecarBase}}/providers/telegram-resolve/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "phone": "+442079460958"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.configured: isBoolean
+  res.body.found_on_telegram: isBoolean
+}
+
+docs {
+  Env-conditional direct hit. Without TELEGRAM_API_ID / _HASH /
+  _SESSION_PATH set in the sidecar's environment, returns
+  `configured: false` + a "not configured" error string. With creds
+  set, performs the standard ImportContacts → GetFullUser →
+  DeleteContacts dance and returns the slim profile.
+}

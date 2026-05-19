@@ -1,0 +1,39 @@
+meta {
+  name: lookups - create (saucenao reverse-image lookup)
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "saucenao",
+    "query": {
+      "image_url": "https://saucenao.com/images/static/banner.png"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Node-native HTTP-fetch — pixel-similarity reverse image search (NOT
+  face recognition, so we stay out of the biometrics regime). Free
+  unauth tier is 100 req/day per IP; SAUCENAO_API_KEY bumps to 200.
+
+  Substitute `image_url` with a real public image URL — the banner here
+  is just to keep the request runnable as a smoke test.
+}

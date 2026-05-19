@@ -1,0 +1,39 @@
+meta {
+  name: lookups - create (mailcat anthropic)
+  type: http
+  seq: 18
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "mailcat",
+    "query": {
+      "username": "anthropic"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Env-conditional on MAILCAT_INSTALL_PATH (a clone of sharsil/mailcat
+  with requirements installed, typically mounted into the sidecar via
+  docker-compose volume). Without it, the Final carries an error
+  pointing at RUNBOOK. With it, streams Partial per existing email
+  address; Final's `found` field is the convenience list of just the
+  `exists: true` entries.
+}

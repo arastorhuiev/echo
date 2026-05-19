@@ -1,0 +1,41 @@
+meta {
+  name: lookups - create (ghunt jane@example.com)
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "ghunt",
+    "query": {
+      "email": "jane@example.com"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Env-conditional on GHUNT_CREDS_PATH (and the file actually existing).
+  Without it, the Final carries `configured: false` + a RUNBOOK pointer.
+  With it set, returns the Google Maps reviews / profile picture / real
+  name (where the target has a Google account).
+
+  If the Final shows `configured: true` + an "ghunt exited 1" error
+  pointing at cookies — re-run `ghunt login` to refresh the creds.m
+  file.
+}

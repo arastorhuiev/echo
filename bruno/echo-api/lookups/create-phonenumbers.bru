@@ -1,0 +1,36 @@
+meta {
+  name: lookups - create (phonenumbers +44 UK)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "phonenumbers",
+    "query": {
+      "phone": "+442079460958"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Validates a UK London fixed-line via libphonenumber. Pure in-process
+  offline lookup — the Final's `valid: true` should arrive within a
+  few ms. Use `stream-sherlock.bru` (or curl) to watch the SSE.
+}

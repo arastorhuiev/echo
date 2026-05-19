@@ -1,0 +1,30 @@
+meta {
+  name: sidecar - phoneinfoga JSON (direct)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{sidecarBase}}/providers/phoneinfoga/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "phone": "+442079460958"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.local_scanner: isDefined
+  res.body.google_dorks: isArray
+}
+
+docs {
+  Direct hit to the phoneinfoga Go-binary subprocess runner. Returns
+  sync JSON with `local_scanner` (carrier metadata) and `google_dorks`
+  (5-10 ready-to-click URLs). Subprocess errors land in `error`
+  rather than 5xx.
+}

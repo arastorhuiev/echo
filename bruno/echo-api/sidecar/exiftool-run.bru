@@ -1,0 +1,30 @@
+meta {
+  name: sidecar - exiftool JSON (direct)
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{sidecarBase}}/providers/exiftool/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "image_url": "https://raw.githubusercontent.com/ianare/exif-samples/master/jpg/gps/DSCN0010.jpg"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.found: isBoolean
+}
+
+docs {
+  Direct hit to the ExifTool subprocess runner. Sidecar downloads the
+  image via httpx (capped at 32 MiB) into a tmp file, runs
+  `exiftool -json -G -fast2`, normalises the verbose output into a
+  fixed allowlist of fields (make/model/lens/GPS/IPTC/XMP). Download
+  failures and oversize images land in `error` rather than 5xx.
+}

@@ -1,0 +1,41 @@
+meta {
+  name: lookups - create (ignorant FR +33)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "ignorant",
+    "query": {
+      "country_code": "33",
+      "phone": "644637111"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Streams per-platform results (Instagram, Snapchat, Amazon) as Partial
+  events; Final accumulates them. `exists: true` ⇒ the phone is
+  registered on that platform.
+
+  Note the input format — `country_code` is the dialling code WITHOUT
+  the leading `+`, and `phone` is national-significant digits only
+  (matches ignorant's positional CLI convention).
+}

@@ -135,6 +135,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **Risks:** rate-limited per IP; 404 is a normal "no Gravatar" result, not a failure. We treat it as `{ found: false }` Final.
 - **Defaults:** `timeoutMs: 10000, maxConcurrent: 8, cacheTtlSec: 86400`
 - **Implementation:** `packages/providers/src/gravatar/`
+- **Bruno:** `bruno/echo-api/lookups/create-gravatar.bru`
 
 ### 10. HIBP Pwned Passwords (`breach`)
 - **Status:** implemented (P8a)
@@ -144,6 +145,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **Risks:** None for the user (password never leaves the process). Free tier is unmetered for the range API. SHA-1 is part of the protocol, not a security choice.
 - **Defaults:** `timeoutMs: 10000, maxConcurrent: 8, cacheTtlSec: 21600`
 - **Implementation:** `packages/providers/src/hibp/`
+- **Bruno:** `bruno/echo-api/lookups/create-hibp.bru`
 
 ### 11. EmailRep (`email`)
 - **Status:** implemented (P8a)
@@ -153,6 +155,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **Risks:** rate-limited per IP on the unauthenticated tier; key activates a higher quota.
 - **Defaults:** `timeoutMs: 10000, maxConcurrent: 4, cacheTtlSec: 43200`
 - **Implementation:** `packages/providers/src/emailrep/`
+- **Bruno:** `bruno/echo-api/lookups/create-emailrep.bru`
 
 ### 12. WhatsMyName (`username`)
 - **Status:** implemented (P8a)
@@ -162,6 +165,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **Risks:** scrape-based — sites can change their detection markers without notice. Sites with `post_body` are filtered out before fan-out (POST requests with templated body are out of MVP scope).
 - **Defaults:** `timeoutMs: 120000, maxConcurrent: 2, cacheTtlSec: 86400`
 - **Implementation:** `packages/providers/src/whatsmyname/`
+- **Bruno:** `bruno/echo-api/lookups/create-whatsmyname.bru`
 
 ### 13. phonenumbers (`phone`)
 - **Status:** implemented (P8a)
@@ -171,6 +175,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **Risks:** None — fully offline, no network. Carrier coverage is uneven (UK fixed-line is often blank, EU mobile usually filled).
 - **Defaults:** `timeoutMs: 5000, maxConcurrent: 16, cacheTtlSec: 2592000`
 - **Implementation:** `packages/providers/src/phonenumbers/` + `services/echo-osint-py/app/phonenumbers_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-phonenumbers.bru` + `bruno/echo-api/sidecar/phonenumbers-run.bru`
 
 ### 14. socialscan (`username`)
 - **Status:** implemented (P8a)
@@ -180,6 +185,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **Risks:** library writes JSON to a file rather than streaming; we slurp after exit. 60s overall timeout. Platforms occasionally rotate their availability endpoints.
 - **Defaults:** `timeoutMs: 60000, maxConcurrent: 4, cacheTtlSec: 21600`
 - **Implementation:** `packages/providers/src/socialscan/` + `services/echo-osint-py/app/socialscan_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-socialscan.bru` + `bruno/echo-api/sidecar/socialscan-run.bru`
 
 ### 15. telegram-resolve (`phone`) — env-conditional
 - **Status:** implemented scaffold (P8a) — activates only with TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_SESSION_PATH
@@ -190,6 +196,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **ToS:** formally not violated — MTProto is the standard user API. Grey area: ResolvePhone adds a contact-book entry on our side; we always delete it.
 - **Defaults:** `timeoutMs: 30000, maxConcurrent: 2, cacheTtlSec: 21600`
 - **Implementation:** `packages/providers/src/telegram-resolve/` + `services/echo-osint-py/app/telegram_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-telegram-resolve.bru` + `bruno/echo-api/sidecar/telegram-resolve-run.bru`
 
 ### 16. truecaller (`phone`) — env-conditional
 - **Status:** implemented scaffold (P8a) — activates only with TRUECALLER_INSTALLATION_ID; **smoke-test on first activation** ([p8-final-plan REV-3 § 4](./research/p8-final-plan-2026-05-19-ru.md))
@@ -200,6 +207,7 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **ToS:** violated (not-public API). UI must label this result as "crowd-sourced from Truecaller".
 - **Defaults:** `timeoutMs: 25000, maxConcurrent: 2, cacheTtlSec: 21600`
 - **Implementation:** `packages/providers/src/truecaller/` + `services/echo-osint-py/app/truecaller_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-truecaller.bru` + `bruno/echo-api/sidecar/truecaller-run.bru`
 
 ### 17. PhoneInfoga (`phone`) — full implementation (was status `planned` since P1)
 - **Status:** implemented (P8a)
@@ -208,10 +216,68 @@ data: {"_tag":"Final","data":{"found":[…],"checked":407}}
 - **What it does:** Local-scanner metadata (country/carrier/line type) + a list of ready-to-click Google dork URLs the UI surfaces as "search for this number on Facebook/LinkedIn/pastebins".
 - **Defaults:** `timeoutMs: 30000, maxConcurrent: 4, cacheTtlSec: 604800`
 - **Implementation:** `packages/providers/src/phoneinfoga/` + `services/echo-osint-py/app/phoneinfoga_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-phoneinfoga.bru` + `bruno/echo-api/sidecar/phoneinfoga-run.bru`
 
-### Phase 8a — known gap
+### 18. socid-extractor (`username`) — P8b
+- **Status:** implemented (P8b, 2026-05-19)
+- **Integration pattern:** Python sidecar (in-process; sidecar fetches via httpx, then `socid_extractor.extract()` on a worker thread)
+- **Source:** [`soxoj/socid-extractor`](https://github.com/soxoj/socid-extractor) — Python MIT, pinned `socid-extractor==0.0.28`
+- **What it does:** URL → site-specific identifiers (Telegram user_id, VK profile id, GitHub commit emails, Patreon ids, …). ~130 site-specific parsers covering the long tail of social handles. Designed as a post-processor for Sherlock/Maigret hits.
+- **Risks:** parser drift when sites change their HTML. Stringified Python lists (`"['a', 'b']"`) for fields like `links` are normalised back into real arrays via `ast.literal_eval`.
+- **Defaults:** `timeoutMs: 20000, maxConcurrent: 4, cacheTtlSec: 43200`
+- **Implementation:** `packages/providers/src/socid-extractor/` + `services/echo-osint-py/app/socid_extractor_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-socid-extractor.bru` + `bruno/echo-api/sidecar/socid-extractor-run.bru`
 
-- **mailcat** (`username → emails`) — sharsil/mailcat is a GitHub script repo (Apache-2.0) without a PyPI package. Integration requires Dockerfile clone + text-output parsing. Deferred to end of P8a — re-evaluate before opening the PR for merge into main.
+### 19. ignorant (`phone`) — P8c
+- **Status:** implemented (P8c, 2026-05-19)
+- **Integration pattern:** Python sidecar (subprocess + stdout JSON parsing — GPL-3.0 so we keep it at the binary boundary)
+- **Source:** [`megadose/ignorant`](https://github.com/megadose/ignorant) — Python GPL-3.0, pinned `ignorant==1.2`
+- **What it does:** Phone → social-presence check on Instagram / Snapchat / Amazon. `exists: true` ⇒ the number is registered on that platform.
+- **Risks:** ~10 months staleness as of 2026-05; Megadose tools usually keep working but require monitoring. Input format requires country dialling code WITHOUT the `+` and digits-only national-significant number.
+- **Defaults:** `timeoutMs: 30000, maxConcurrent: 2, cacheTtlSec: 21600`
+- **Implementation:** `packages/providers/src/ignorant/` + `services/echo-osint-py/app/ignorant_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-ignorant.bru` + `bruno/echo-api/sidecar/ignorant-run.bru`
+
+### 20. GHunt (`email`) — env-conditional, P8c
+- **Status:** implemented (P8c, 2026-05-19) — activates only with `GHUNT_CREDS_PATH` set to a present `creds.m` file produced by `ghunt login`
+- **Integration pattern:** Python sidecar (subprocess + tmp JSON file — AGPL-3.0 so we keep it at the binary boundary)
+- **Source:** [`mxrch/GHunt`](https://github.com/mxrch/GHunt) — AGPL-3.0, pinned `ghunt==2.3.3`
+- **What it does:** Email → Google profile (real name, gaia_id, profile picture, Maps reviews count, calendar visibility). Often the single highest-value email→identity bridge in OSINT.
+- **AGPL nuance:** AGPL §13 (network clause) doesn't trigger because we don't modify GHunt. Unmodified upstream invoked as a subprocess counts as "mere aggregation".
+- **Risks:** stale Google cookies → 401 in stderr; re-run `ghunt login`. Subprocess errors land in `error` with `configured: true` rather than throwing.
+- **Defaults:** `timeoutMs: 60000, maxConcurrent: 2, cacheTtlSec: 43200`
+- **Implementation:** `packages/providers/src/ghunt/` + `services/echo-osint-py/app/ghunt_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-ghunt.bru` + `bruno/echo-api/sidecar/ghunt-run.bru`
+
+### 21. mailcat (`username` → emails) — env-conditional, P8c
+- **Status:** implemented scaffold (P8c, 2026-05-19) — activates only with `MAILCAT_INSTALL_PATH` pointing at a clone of `sharsil/mailcat` whose `requirements.txt` has been installed (typically a docker-compose volume mount)
+- **Integration pattern:** Python sidecar (subprocess on a manually-provisioned script repo + `[+]` / `[-]` line parsing)
+- **Source:** [`sharsil/mailcat`](https://github.com/sharsil/mailcat) — Apache-2.0 (~22 email providers checked)
+- **What it does:** Username → existing email addresses across the common providers (Gmail, ProtonMail, Outlook, etc.). Sidecar streams Partial per `exists: true` hit; Final's `found` array is the convenience slice.
+- **Why env-conditional and not baked into the image:** upstream depends on pyppeteer + Chromium (~250 MB). Bakeing that into the default sidecar image is too heavy for a single provider; the env-conditional pattern lets the operator opt in by mounting a manually-installed clone.
+- **Defaults:** `timeoutMs: 90000, maxConcurrent: 2, cacheTtlSec: 43200`
+- **Implementation:** `packages/providers/src/mailcat/` + `services/echo-osint-py/app/mailcat_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-mailcat.bru` + `bruno/echo-api/sidecar/mailcat-run.bru`
+
+### 22. SauceNAO (`image`) — P8d
+- **Status:** implemented (P8d, 2026-05-19)
+- **Integration pattern:** Node-native HTTP fetch — no sidecar dependency. Optional `SAUCENAO_API_KEY` env bumps the unauth 100/day to 200/day.
+- **Source:** SauceNAO REST API at `https://saucenao.com/search.php`
+- **What it does:** Pixel-similarity reverse image search across Pixiv / Twitter / Mastodon / Danbooru / Anidb / etc. **Not face recognition** — stays out of the biometrics regime.
+- **Risks:** rate-limited per IP on unauth tier. Matches below the default 60-similarity threshold are filtered out at the runtime edge.
+- **Defaults:** `timeoutMs: 15000, maxConcurrent: 2, cacheTtlSec: 604800`
+- **Implementation:** `packages/providers/src/saucenao/`
+- **Bruno:** `bruno/echo-api/lookups/create-saucenao.bru`
+
+### 23. ExifTool (`image`) — P8d, supersedes `exifr`
+- **Status:** implemented (P8d, 2026-05-19) — supersedes the deferred `exifr` Phase 1 starter
+- **Integration pattern:** Python sidecar (subprocess on the `libimage-exiftool-perl` Debian package; AGPL-clean `mere aggregation`)
+- **Source:** [`exiftool/exiftool`](https://exiftool.org/) — GPL-3.0 + Artistic dual-licensed, installed via `apt-get install libimage-exiftool-perl` in the sidecar Dockerfile
+- **What it does:** Downloads the image URL into a sidecar tmp file (32 MiB cap) then runs `exiftool -json -G -fast2` on it. Output is slimmed to a fixed allowlist: camera make/model/lens, GPS lat/lon/alt, IPTC byline/credit, XMP creator/rights — nothing else.
+- **Risks:** Image fetches respect a 32 MiB cap; oversize/inaccessible images land in `error` not 5xx. GPS coords arrive in ExifTool's native string format (`37 deg 24' 35.40" N`); the UI parses if it wants numeric.
+- **Defaults:** `timeoutMs: 30000, maxConcurrent: 4, cacheTtlSec: 300`
+- **Implementation:** `packages/providers/src/exiftool/` + `services/echo-osint-py/app/exiftool_runner.py`
+- **Bruno:** `bruno/echo-api/lookups/create-exiftool.bru` + `bruno/echo-api/sidecar/exiftool-run.bru`
 
 ---
 
