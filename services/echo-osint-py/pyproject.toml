@@ -39,6 +39,11 @@ dependencies = [
     # Snapchat / Amazon. GPL-3.0 so we invoke as a subprocess (not an
     # import) for the same "mere aggregation" reasoning as PhoneInfoga.
     "ignorant==1.2",
+    # GHunt — AGPL-3.0 email→Google profile resolver. Subprocess-only
+    # (AGPL §13 network clause never triggers because we don't modify
+    # GHunt). Env-conditional: needs GHUNT_CREDS_PATH set + the file
+    # actually present (one-time `ghunt login` flow per RUNBOOK).
+    "ghunt==2.3.3",
 ]
 
 [project.optional-dependencies]

@@ -26,6 +26,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.ghunt_runner import DEFAULT_TIMEOUT_S as GHUNT_DEFAULT_TIMEOUT_S
+from app.ghunt_runner import run_ghunt_email
 from app.ignorant_runner import DEFAULT_TIMEOUT_S as IGNORANT_DEFAULT_TIMEOUT_S
 from app.ignorant_runner import IgnorantEvent, run_ignorant
 from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
@@ -92,6 +94,24 @@ class IgnorantQuery(BaseModel):
     country_code: str = Field(min_length=1, max_length=4, pattern=r"^\d+$")
     # National-significant number digits only (no `+`, no spaces).
     phone: str = Field(min_length=4, max_length=15, pattern=r"^\d+$")
+
+
+class GhuntEmailQuery(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+
+
+class GhuntEmailResponse(BaseModel):
+    configured: bool
+    found: bool
+    name: str | None = None
+    gaia_id: str | None = None
+    profile_picture: str | None = None
+    cover_photo: str | None = None
+    emails: list[str] = []
+    reviews_count: int | None = None
+    maps_contributions: int | None = None
+    calendar_visible: bool | None = None
+    error: str | None = None
 
 
 class SocidExtractorResponse(BaseModel):
@@ -250,6 +270,11 @@ def info() -> SidecarInfo:
                 category="phone",
                 description="Phone → social presence on Instagram / Snapchat / Amazon (Megadose).",
             ),
+            ProviderInfo(
+                id="ghunt",
+                category="email",
+                description="Email → Google profile / Maps reviews — env-conditional (GHunt, AGPL subprocess).",
+            ),
         ],
     )
 
@@ -391,6 +416,34 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
         geocoded_location=result.geocoded_location,
         timezones=result.timezones,
         parse_error=result.parse_error,
+    )
+
+
+@app.post("/providers/ghunt/run", response_model=GhuntEmailResponse)
+async def ghunt_run(
+    body: GhuntEmailQuery,
+    timeout_s: float = Query(default=GHUNT_DEFAULT_TIMEOUT_S, gt=0, le=180),
+) -> GhuntEmailResponse:
+    """Run `ghunt email <email>` and return the normalised JSON profile.
+
+    Env-conditional — when `GHUNT_CREDS_PATH` isn't set / the file is
+    missing, returns `configured=false` with an instructive error
+    rather than spawning a useless subprocess.
+    """
+
+    result = await run_ghunt_email(body.email, timeout_s=timeout_s)
+    return GhuntEmailResponse(
+        configured=result.configured,
+        found=result.found,
+        name=result.name,
+        gaia_id=result.gaia_id,
+        profile_picture=result.profile_picture,
+        cover_photo=result.cover_photo,
+        emails=result.emails,
+        reviews_count=result.reviews_count,
+        maps_contributions=result.maps_contributions,
+        calendar_visible=result.calendar_visible,
+        error=result.error,
     )
 
 

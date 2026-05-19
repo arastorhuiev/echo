@@ -4,6 +4,8 @@ import { buildLoggerConfig, MetricsModule } from "@echo/observability"
 import {
   EMAILREP_PROVIDER,
   EmailrepProviderModule,
+  GHUNT_PROVIDER,
+  GhuntProviderModule,
   GRAVATAR_PROVIDER,
   GravatarProviderModule,
   HIBP_PROVIDER,
@@ -78,6 +80,7 @@ const isProd = process.env.NODE_ENV === "production"
         TruecallerProviderModule.forRoot(),
         SocidExtractorProviderModule.forRoot(),
         IgnorantProviderModule.forRoot(),
+        GhuntProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -93,6 +96,7 @@ const isProd = process.env.NODE_ENV === "production"
         TRUECALLER_PROVIDER,
         SOCID_EXTRACTOR_PROVIDER,
         IGNORANT_PROVIDER,
+        GHUNT_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -108,6 +112,7 @@ const isProd = process.env.NODE_ENV === "production"
         truecaller: OsintProvider,
         socidExtractor: OsintProvider,
         ignorant: OsintProvider,
+        ghunt: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -123,6 +128,7 @@ const isProd = process.env.NODE_ENV === "production"
           truecaller,
           socidExtractor,
           ignorant,
+          ghunt,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },
