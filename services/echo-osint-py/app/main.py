@@ -26,6 +26,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
+from app.maigret_runner import MaigretEvent, run_maigret
 from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
 
@@ -56,6 +58,10 @@ class SidecarInfo(BaseModel):
 
 
 class SherlockQuery(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+
+
+class MaigretQuery(BaseModel):
     username: str = Field(min_length=1, max_length=50)
 
 
@@ -100,6 +106,11 @@ def info() -> SidecarInfo:
                 category="phone",
                 description="Phone number validation + region/carrier/type metadata (libphonenumber).",
             ),
+            ProviderInfo(
+                id="maigret",
+                category="username",
+                description="Username hunting across ~3000 sites — broader corpus than Sherlock.",
+            ),
         ],
     )
 
@@ -136,6 +147,34 @@ async def sherlock_run(
     return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
 
 
+@app.post("/providers/maigret/run")
+async def maigret_run(
+    body: MaigretQuery,
+    timeout_s: float = Query(default=MAIGRET_DEFAULT_TIMEOUT_S, gt=0, le=600),
+) -> StreamingResponse:
+    if not USERNAME_RE.match(body.username):
+        raise HTTPException(
+            status_code=422,
+            detail={"error": "InvalidUsername", "expected": USERNAME_RE.pattern},
+        )
+
+    async def stream() -> AsyncIterator[bytes]:
+        try:
+            async for event in run_maigret(body.username, timeout_s=timeout_s):
+                yield _to_sse(event)
+                await anyio.sleep(0)
+        except Exception as err:  # noqa: BLE001 — surface unexpected runner errors
+            logger.exception("maigret runner crashed")
+            yield _to_sse(MaigretEvent(kind="error", message=str(err)))
+
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+
 @app.post("/providers/phonenumbers/run", response_model=PhonenumbersResponse)
 def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
     """Synchronous in-process libphonenumber lookup.
@@ -162,11 +201,13 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
     )
 
 
-def _to_sse(event: SherlockEvent) -> bytes:
-    """Serialize one SherlockEvent as an SSE `data:` frame.
+def _to_sse(event: SherlockEvent | MaigretEvent) -> bytes:
+    """Serialize one Sherlock/Maigret event as an SSE `data:` frame.
 
-    Drops `None` fields so the wire payload stays compact and the Node
-    consumer can rely on a stable shape per `kind`.
+    Both runner event types share the same field shape (kind/site/url/
+    username/checked/message). Drops `None` fields so the wire payload
+    stays compact and the Node consumer can rely on a stable shape per
+    `kind`.
     """
 
     payload: dict[str, object] = {"kind": event.kind}

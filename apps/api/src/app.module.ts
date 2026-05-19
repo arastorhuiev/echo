@@ -8,6 +8,8 @@ import {
   GravatarProviderModule,
   HIBP_PROVIDER,
   HibpProviderModule,
+  MAIGRET_PROVIDER,
+  MaigretProviderModule,
   type OsintProvider,
   OsintProviderRegistryModule,
   PHONENUMBERS_PROVIDER,
@@ -57,6 +59,7 @@ const isProd = process.env.NODE_ENV === "production"
         EmailrepProviderModule.forRoot(),
         WhatsmynameProviderModule.forRoot(),
         PhonenumbersProviderModule.forRoot(),
+        MaigretProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -65,6 +68,7 @@ const isProd = process.env.NODE_ENV === "production"
         EMAILREP_PROVIDER,
         WHATSMYNAME_PROVIDER,
         PHONENUMBERS_PROVIDER,
+        MAIGRET_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -73,8 +77,9 @@ const isProd = process.env.NODE_ENV === "production"
         emailrep: OsintProvider,
         whatsmyname: OsintProvider,
         phonenumbers: OsintProvider,
+        maigret: OsintProvider,
       ) => {
-        const real = [sherlock, gravatar, hibp, emailrep, whatsmyname, phonenumbers]
+        const real = [sherlock, gravatar, hibp, emailrep, whatsmyname, phonenumbers, maigret]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },
     }),

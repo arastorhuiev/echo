@@ -16,6 +16,9 @@ dependencies = [
     # libphonenumber Python port (David Drysdale, Apache-2.0). Used
     # in-process by phonenumbers_runner; no subprocess.
     "phonenumbers==9.0.7",
+    # Maigret — username scanner with ~3k site corpus (superset of
+    # Sherlock). Invoked as `python -u -m maigret`, NDJSON streaming.
+    "maigret==0.6.1",
 ]
 
 [project.optional-dependencies]
