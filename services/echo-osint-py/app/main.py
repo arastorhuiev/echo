@@ -26,9 +26,15 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
 
 logger = logging.getLogger("echo.main")
+
+# E.164 max length is 15 digits + leading `+`. Accept slightly wider so
+# users can paste numbers with spaces/dashes and let libphonenumber
+# normalise. Hard upper bound prevents abuse.
+PHONE_MAX_LEN = 32
 
 SIDECAR_VERSION = "0.0.0"
 # Same character class echo's @echo/providers/sherlock inputSchema uses.
@@ -53,6 +59,25 @@ class SherlockQuery(BaseModel):
     username: str = Field(min_length=1, max_length=50)
 
 
+class PhonenumbersQuery(BaseModel):
+    phone: str = Field(min_length=1, max_length=PHONE_MAX_LEN)
+
+
+class PhonenumbersResponse(BaseModel):
+    valid: bool
+    possible: bool
+    e164: str | None
+    national_format: str | None
+    international_format: str | None
+    country_code: int | None
+    region_code: str | None
+    number_type: str
+    carrier_name: str
+    geocoded_location: str
+    timezones: list[str]
+    parse_error: str | None
+
+
 app = FastAPI(title="echo-osint-py", version=SIDECAR_VERSION)
 
 
@@ -69,6 +94,11 @@ def info() -> SidecarInfo:
                 id="sherlock",
                 category="username",
                 description="Username hunting across hundreds of social platforms (sherlock-project).",
+            ),
+            ProviderInfo(
+                id="phonenumbers",
+                category="phone",
+                description="Phone number validation + region/carrier/type metadata (libphonenumber).",
             ),
         ],
     )
@@ -104,6 +134,32 @@ async def sherlock_run(
         "X-Accel-Buffering": "no",
     }
     return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+
+@app.post("/providers/phonenumbers/run", response_model=PhonenumbersResponse)
+def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
+    """Synchronous in-process libphonenumber lookup.
+
+    Returns 200 in both valid and invalid cases — `valid: false` is a
+    legitimate result the UI surfaces. Only catastrophic library bugs
+    surface as 500s (handled by FastAPI default).
+    """
+
+    result = run_phonenumbers(body.phone)
+    return PhonenumbersResponse(
+        valid=result.valid,
+        possible=result.possible,
+        e164=result.e164,
+        national_format=result.national_format,
+        international_format=result.international_format,
+        country_code=result.country_code,
+        region_code=result.region_code,
+        number_type=result.number_type,
+        carrier_name=result.carrier_name,
+        geocoded_location=result.geocoded_location,
+        timezones=result.timezones,
+        parse_error=result.parse_error,
+    )
 
 
 def _to_sse(event: SherlockEvent) -> bytes:

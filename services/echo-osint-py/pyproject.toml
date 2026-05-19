@@ -13,6 +13,9 @@ dependencies = [
     "sherlock-project==0.15.0",
     "httpx==0.28.1",
     "pydantic==2.10.4",
+    # libphonenumber Python port (David Drysdale, Apache-2.0). Used
+    # in-process by phonenumbers_runner; no subprocess.
+    "phonenumbers==9.0.7",
 ]
 
 [project.optional-dependencies]
