@@ -12,7 +12,9 @@ import {
   MaigretProviderModule,
   type OsintProvider,
   OsintProviderRegistryModule,
+  PHONEINFOGA_PROVIDER,
   PHONENUMBERS_PROVIDER,
+  PhoneinfogaProviderModule,
   PhonenumbersProviderModule,
   SHERLOCK_PROVIDER,
   SherlockProviderModule,
@@ -54,6 +56,7 @@ const isProd = process.env.NODE_ENV === "production"
         PhonenumbersProviderModule.forRoot(),
         MaigretProviderModule.forRoot(),
         SocialscanProviderModule.forRoot(),
+        PhoneinfogaProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -64,6 +67,7 @@ const isProd = process.env.NODE_ENV === "production"
         PHONENUMBERS_PROVIDER,
         MAIGRET_PROVIDER,
         SOCIALSCAN_PROVIDER,
+        PHONEINFOGA_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -74,6 +78,7 @@ const isProd = process.env.NODE_ENV === "production"
         phonenumbers: OsintProvider,
         maigret: OsintProvider,
         socialscan: OsintProvider,
+        phoneinfoga: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -84,6 +89,7 @@ const isProd = process.env.NODE_ENV === "production"
           phonenumbers,
           maigret,
           socialscan,
+          phoneinfoga,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },

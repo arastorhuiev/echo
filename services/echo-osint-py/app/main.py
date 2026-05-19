@@ -28,6 +28,8 @@ from pydantic import BaseModel, Field
 
 from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
 from app.maigret_runner import MaigretEvent, run_maigret
+from app.phoneinfoga_runner import DEFAULT_TIMEOUT_S as PHONEINFOGA_DEFAULT_TIMEOUT_S
+from app.phoneinfoga_runner import run_phoneinfoga
 from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
 from app.socialscan_runner import DEFAULT_TIMEOUT_S as SOCIALSCAN_DEFAULT_TIMEOUT_S
@@ -77,6 +79,24 @@ class PhonenumbersQuery(BaseModel):
     phone: str = Field(min_length=1, max_length=PHONE_MAX_LEN)
 
 
+class PhoneinfogaQuery(BaseModel):
+    phone: str = Field(min_length=1, max_length=PHONE_MAX_LEN)
+
+
+class PhoneinfogaLocalScanner(BaseModel):
+    valid: bool
+    country: str
+    country_code: str
+    carrier: str
+    line_type: str
+
+
+class PhoneinfogaResponse(BaseModel):
+    local_scanner: PhoneinfogaLocalScanner | None
+    google_dorks: list[str]
+    error: str | None
+
+
 class PhonenumbersResponse(BaseModel):
     valid: bool
     possible: bool
@@ -123,6 +143,11 @@ def info() -> SidecarInfo:
                 id="socialscan",
                 category="username",
                 description="Username/email availability check across ~10 social platforms.",
+            ),
+            ProviderInfo(
+                id="phoneinfoga",
+                category="phone",
+                description="Phone scanner — Go CLI, returns local-scanner metadata + Google dorks.",
             ),
         ],
     )
@@ -208,6 +233,38 @@ async def socialscan_run(
         "X-Accel-Buffering": "no",
     }
     return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+
+@app.post("/providers/phoneinfoga/run", response_model=PhoneinfogaResponse)
+async def phoneinfoga_run(
+    body: PhoneinfogaQuery,
+    timeout_s: float = Query(default=PHONEINFOGA_DEFAULT_TIMEOUT_S, gt=0, le=120),
+) -> PhoneinfogaResponse:
+    """Subprocess-based phoneinfoga lookup.
+
+    Returns a synchronous JSON shape (not SSE) — the scan completes in
+    1-3s and a single Final on the TS side is fine. `error` is
+    non-null on subprocess/parse failures; the route still returns 200
+    so the caller surfaces the failure as a Final, not an HTTP error.
+    """
+
+    result = await run_phoneinfoga(body.phone, timeout_s=timeout_s)
+    local = result.local_scanner
+    return PhoneinfogaResponse(
+        local_scanner=(
+            PhoneinfogaLocalScanner(
+                valid=local.valid,
+                country=local.country,
+                country_code=local.country_code,
+                carrier=local.carrier,
+                line_type=local.line_type,
+            )
+            if local is not None
+            else None
+        ),
+        google_dorks=result.google_dorks,
+        error=result.error,
+    )
 
 
 @app.post("/providers/phonenumbers/run", response_model=PhonenumbersResponse)
