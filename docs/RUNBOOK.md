@@ -84,7 +84,45 @@ psql $DATABASE_URL -c "UPDATE providers SET breaker_state='closed', breaker_open
 *To be populated.*
 
 ### Add a new OSINT provider
-*To be populated in P8.* Cross-reference the provider how-to that lands with that phase.
+
+Each provider lives in `packages/providers/src/<id>/` with files `<id>.ts`, `<id>.types.ts`, `<id>.module.ts`, `<id>.test.ts`, `index.ts`. If the provider needs a Python tool, add the runner module to `services/echo-osint-py/app/<id>_runner.py` and a FastAPI route in `app/main.py`. Register the provider in both `apps/api/src/app.module.ts` and `apps/worker/src/app.module.ts`. Update `docs/PROVIDERS.md` with a status card and add the env vars (if any) to `.env.example`. The P8a commits on `phase/p8a-foundation` are good worked examples covering HTTP-fetch, in-process Python, subprocess Python, and Go-binary subprocess patterns.
+
+### Provider credentials (env-conditional providers)
+
+A subset of providers register but stay dormant until env vars are present. Without those env vars the routes return `configured=false` with an instructive error rather than crashing.
+
+#### Telegram MTProto resolve (`telegram-resolve`)
+
+1. **Get the API key** — free at <https://my.telegram.org/apps>. Returns `api_id` (integer) and `api_hash` (hex).
+2. **Provision a disposable SIM** — buy a one-shot phone number from a reseller (e.g. 5sim.net or sms-activate.org, ~$0.30 in 2026). Register a fresh Telegram account on that number through any official client.
+3. **Capture a session file** — one-time, interactive. Run `python -c "from telethon.sync import TelegramClient; TelegramClient('/tmp/session', <api_id>, '<api_hash>').start()"` on a workstation, enter the SMS code Telegram sends to your disposable SIM. The resulting `/tmp/session.session` file IS the credential.
+4. **Move the session file to the server** (chmod 600). The path becomes `TELEGRAM_SESSION_PATH`.
+5. **Set env vars** in `.env`:
+   ```env
+   TELEGRAM_API_ID=12345
+   TELEGRAM_API_HASH=abc123def456...
+   TELEGRAM_SESSION_PATH=/data/telegram-session.session
+   ```
+6. **Verify** — `docker compose restart osint-py`, then trigger a lookup. The Final's `configured` flag should be `true`.
+
+Rate-limits: ~100–200 resolves/day per session before `FLOOD_WAIT`. When that becomes a bottleneck, provision more sessions and pool them (separate work item, not P8a).
+
+#### Truecaller (`truecaller`)
+
+1. **Provision a disposable SIM** — same as Telegram step 2 above. Reuse the same SIM if convenient (Truecaller and Telegram don't conflict).
+2. **Run the truecallerpy login flow** — interactive. On a workstation with `truecallerpy` installed:
+   ```bash
+   pip install truecallerpy
+   truecallerpy --login
+   ```
+   Enter your disposable phone number, country code, and the OTP Truecaller sends via SMS. The command prints the `installationId` on success.
+3. **Set the env var** in `.env`:
+   ```env
+   TRUECALLER_INSTALLATION_ID=aXXX-XXXX-XXXX
+   ```
+4. **Smoke-test** — see [p8-final-plan REV-3 § 4](./research/p8-final-plan-2026-05-19-ru.md). Trigger one lookup against a known number; if the route returns `error: "truecallerpy error: HTTP 401"` the `installationId` has been invalidated (Truecaller occasionally bans). Re-run the login flow with a fresh SIM.
+
+Rate-limits: empirically ~100–200 lookups/day per `installationId` before bans. Cache aggressively (`cacheTtlSec` is already 6 hours).
 
 ### Backup / restore
 *To be populated in P11.* `pg_dump` → B2 / Hetzner Object Storage; restore is `pg_restore` into a fresh DB.

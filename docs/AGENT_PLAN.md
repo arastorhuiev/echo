@@ -400,38 +400,51 @@ Per owner request: before any work that would commit the codebase to Effect-TS, 
 
 ## P8 — Provider catalog rollout
 
-**Status:** not started
-**Estimated size:** 2–3 days (parallelizable)
-**Goal:** Phase-1 provider lineup live: Sherlock + ~5–7 more across categories per [`PROVIDERS.md`](./PROVIDERS.md).
+**Status:** P8a in progress (started 2026-05-19) — 11 of 12 active providers shipped on branch `phase/p8a-foundation`; mailcat deferred to end-of-P8a.
+**Estimated size:** 2–3 days original; P8a alone ran ~7 incremental commits.
+**Canonical plan:** [`docs/research/p8-final-plan-2026-05-19-ru.md`](./research/p8-final-plan-2026-05-19-ru.md) (REV-3) — supersedes the original P8 task list below.
 
 ### Inputs
 - P7 done.
 - P7a done (proxy gateway scaffold available for scrape-based providers).
 - [`PROVIDERS.md`](./PROVIDERS.md) populated by the research pass.
+- P8 research consolidated in `docs/research/p8-final-plan-2026-05-19-ru.md` (REV-3) — read this first.
 
-### Tasks (roughly parallelizable; one branch per provider is fine)
+### P8a — Foundation (in progress)
 
-For each chosen provider:
+Per-provider pattern: TS factory in `packages/providers/src/<id>/` (types, provider, module, index, tests) plus, when sidecar-bound, a `<id>_runner.py` in `services/echo-osint-py/app/` and a FastAPI route in `app/main.py`.
 
-1. If Python-only → add to `services/echo-osint-py/app/`. If Node-native → add as a `@echo/providers/<id>/` package using `@echo/http-clients`.
-2. Define `inputSchema` and `outputSchema` carefully — these become public API.
-3. Implement `run()`. Lean on `withCache`, `withSingleFlight`, `withBreaker`, `withRateLimit`, `withTracing` decorators.
-4. Pass conformance suite.
-5. Bruno requests committed.
-6. Documented in [`PROVIDERS.md`](./PROVIDERS.md): one paragraph + sample input/output.
+**Implemented (commits on `phase/p8a-foundation`):**
 
-Suggested Phase-1 starter set (will be confirmed by `PROVIDERS.md`):
-- Username: Sherlock + Maigret
-- Email: Holehe + EmailRep (free tier)
-- Phone: PhoneInfoga + libphonenumber (Node-native validity check)
-- Domain: Subfinder + dnstwist
-- Tech fingerprint: Wappalyzer CLI
+| Provider | Category | Integration | Source |
+|---|---|---|---|
+| `gravatar` | email | HTTP fetch (no auth) | `packages/providers/src/gravatar/` |
+| `hibp-pwned-passwords` | breach | HTTP fetch (k-anonymity) | `packages/providers/src/hibp/` |
+| `emailrep` | email | HTTP fetch (free unauth) | `packages/providers/src/emailrep/` |
+| `whatsmyname` | username | own TS runner over vendored CC-BY-SA dataset | `packages/providers/src/whatsmyname/` |
+| `phonenumbers` | phone | Python sidecar (in-process libphonenumber) | `services/echo-osint-py/app/phonenumbers_runner.py` |
+| `maigret` | username | Python sidecar (subprocess + NDJSON) | `services/echo-osint-py/app/maigret_runner.py` |
+| `socialscan` | username | Python sidecar (subprocess + JSON file) | `services/echo-osint-py/app/socialscan_runner.py` |
+| `phoneinfoga` | phone | Python sidecar (Go binary subprocess) | `services/echo-osint-py/app/phoneinfoga_runner.py` |
+| `telegram-resolve` | phone | Python sidecar (Telethon, env-conditional) | `services/echo-osint-py/app/telegram_runner.py` |
+| `truecaller` | phone | Python sidecar (truecallerpy, env-conditional) | `services/echo-osint-py/app/truecaller_runner.py` |
 
-### Definition of done
-- [ ] All chosen providers conformance-test green.
-- [ ] All listed in `/api/providers`.
-- [ ] All have at least one Bruno request hitting them with real input.
-- [ ] No provider is in the catalog without a documented input/output schema.
+**Deferred during P8a:**
+- `mailcat` (sharsil/mailcat) — GitHub-script-only, not pip-installable; requires Dockerfile clone + text-output parsing. Re-evaluate before opening the P8a PR.
+
+### Definition of done (P8a)
+- [x] Providers conformance-test green (169 tests passing in `pnpm test`).
+- [x] Registered in api + worker `OsintProviderRegistryModule.forRootAsync`.
+- [ ] Listed in `/api/providers` end-to-end (manual verification once branch merged).
+- [ ] Each provider has at least one Bruno request committed under `bruno/echo-api/lookups/`.
+- [x] Each provider has a documented input/output schema (zod at TS edge, pydantic at sidecar edge).
+- [ ] mailcat decision (defer permanently or close out before PR).
+- [ ] PROVIDERS.md updated with the 10 new cards.
+- [ ] RUNBOOK.md updated with the Telegram + Truecaller credential setup flow.
+
+### P8b–P8d (queued)
+
+See p8-final-plan REV-3 for the next sub-phases. P8b adds the GetContact provider via vendored `sooluh/gtc-js` submodule; P8c folds in GHunt + ignorant; P8d brings SauceNAO + ExifTool for the image foundation.
 
 ---
 
