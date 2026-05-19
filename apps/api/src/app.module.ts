@@ -2,6 +2,12 @@ import { type AppConfigService, ConfigModule } from "@echo/config"
 import { DbModule, RedisModule } from "@echo/nest"
 import { buildLoggerConfig, MetricsModule } from "@echo/observability"
 import {
+  EMAILREP_PROVIDER,
+  EmailrepProviderModule,
+  GRAVATAR_PROVIDER,
+  GravatarProviderModule,
+  HIBP_PROVIDER,
+  HibpProviderModule,
   type OsintProvider,
   OsintProviderRegistryModule,
   SHERLOCK_PROVIDER,
@@ -40,10 +46,22 @@ const isProd = process.env.NODE_ENV === "production"
     // injects OSINT_PY_URL from ConfigService; stubs stay registered in
     // non-prod for end-to-end tests against the real pipeline.
     OsintProviderRegistryModule.forRootAsync({
-      imports: [SherlockProviderModule.forRoot()],
-      inject: [SHERLOCK_PROVIDER],
-      useFactory: (sherlock: OsintProvider) =>
-        isProd ? [sherlock] : [sherlock, ...STUB_PROVIDERS],
+      imports: [
+        SherlockProviderModule.forRoot(),
+        GravatarProviderModule.forRoot(),
+        HibpProviderModule.forRoot(),
+        EmailrepProviderModule.forRoot(),
+      ],
+      inject: [SHERLOCK_PROVIDER, GRAVATAR_PROVIDER, HIBP_PROVIDER, EMAILREP_PROVIDER],
+      useFactory: (
+        sherlock: OsintProvider,
+        gravatar: OsintProvider,
+        hibp: OsintProvider,
+        emailrep: OsintProvider,
+      ) => {
+        const real = [sherlock, gravatar, hibp, emailrep]
+        return isProd ? real : [...real, ...STUB_PROVIDERS]
+      },
     }),
     // Long-lived clients — both global from @echo/nest, with shutdown hooks
     DbModule,

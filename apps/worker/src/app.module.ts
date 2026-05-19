@@ -2,6 +2,12 @@ import { type AppConfigService, ConfigModule } from "@echo/config"
 import { DbModule, RedisModule } from "@echo/nest"
 import { buildLoggerConfig } from "@echo/observability"
 import {
+  EMAILREP_PROVIDER,
+  EmailrepProviderModule,
+  GRAVATAR_PROVIDER,
+  GravatarProviderModule,
+  HIBP_PROVIDER,
+  HibpProviderModule,
   type OsintProvider,
   OsintProviderRegistryModule,
   SHERLOCK_PROVIDER,
@@ -31,10 +37,22 @@ const isProd = process.env.NODE_ENV === "production"
     // Provider registry mirrors the api side — see apps/api/src/app.module.ts
     // for why both sides register the same set.
     OsintProviderRegistryModule.forRootAsync({
-      imports: [SherlockProviderModule.forRoot()],
-      inject: [SHERLOCK_PROVIDER],
-      useFactory: (sherlock: OsintProvider) =>
-        isProd ? [sherlock] : [sherlock, ...STUB_PROVIDERS],
+      imports: [
+        SherlockProviderModule.forRoot(),
+        GravatarProviderModule.forRoot(),
+        HibpProviderModule.forRoot(),
+        EmailrepProviderModule.forRoot(),
+      ],
+      inject: [SHERLOCK_PROVIDER, GRAVATAR_PROVIDER, HIBP_PROVIDER, EMAILREP_PROVIDER],
+      useFactory: (
+        sherlock: OsintProvider,
+        gravatar: OsintProvider,
+        hibp: OsintProvider,
+        emailrep: OsintProvider,
+      ) => {
+        const real = [sherlock, gravatar, hibp, emailrep]
+        return isProd ? real : [...real, ...STUB_PROVIDERS]
+      },
     }),
     // Global clients from @echo/nest — DB for persisting lookups +
     // lookup_events; Redis for the cache wrapper inside applyWrappers().

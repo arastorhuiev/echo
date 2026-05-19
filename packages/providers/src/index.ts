@@ -1,3 +1,6 @@
 export * from "@/core/index.js"
+export * from "@/emailrep/index.js"
+export * from "@/gravatar/index.js"
+export * from "@/hibp/index.js"
 export * from "@/sherlock/index.js"
 export * from "@/stubs/index.js"
