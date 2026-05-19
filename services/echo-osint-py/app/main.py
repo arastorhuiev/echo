@@ -34,6 +34,8 @@ from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
 from app.socialscan_runner import DEFAULT_TIMEOUT_S as SOCIALSCAN_DEFAULT_TIMEOUT_S
 from app.socialscan_runner import SocialscanEvent, run_socialscan
+from app.socid_extractor_runner import DEFAULT_TIMEOUT_S as SOCID_EXTRACTOR_DEFAULT_TIMEOUT_S
+from app.socid_extractor_runner import run_socid_extractor
 from app.telegram_runner import DEFAULT_TIMEOUT_S as TELEGRAM_DEFAULT_TIMEOUT_S
 from app.telegram_runner import run_telegram_resolve
 from app.truecaller_runner import DEFAULT_TIMEOUT_S as TRUECALLER_DEFAULT_TIMEOUT_S
@@ -77,6 +79,17 @@ class SocialscanQuery(BaseModel):
     # socialscan accepts a mixed list of usernames + emails; the API
     # caller is responsible for pre-validating both forms.
     queries: list[str] = Field(min_length=1, max_length=10)
+
+
+class SocidExtractorQuery(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+
+
+class SocidExtractorResponse(BaseModel):
+    found: bool
+    url: str
+    fields: dict[str, object]
+    error: str | None
 
 
 class PhonenumbersQuery(BaseModel):
@@ -217,6 +230,11 @@ def info() -> SidecarInfo:
                 id="truecaller",
                 category="phone",
                 description="Truecaller phone→identity lookup — env-conditional (truecallerpy).",
+            ),
+            ProviderInfo(
+                id="socid-extractor",
+                category="username",
+                description="URL → site-specific IDs (~130 methods, post-processor for Sherlock/Maigret).",
             ),
         ],
     )
@@ -359,6 +377,28 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
         geocoded_location=result.geocoded_location,
         timezones=result.timezones,
         parse_error=result.parse_error,
+    )
+
+
+@app.post("/providers/socid-extractor/run", response_model=SocidExtractorResponse)
+async def socid_extractor_run(
+    body: SocidExtractorQuery,
+    timeout_s: float = Query(default=SOCID_EXTRACTOR_DEFAULT_TIMEOUT_S, gt=0, le=60),
+) -> SocidExtractorResponse:
+    """URL → site-specific IDs via socid_extractor.
+
+    Synchronous JSON shape — the extractor is one-shot (fetch + parse,
+    ~1-3s total). Network or parser failures land in `error` rather than
+    throwing 5xx; the consumer surfaces them as a Final with no
+    extracted fields.
+    """
+
+    result = await run_socid_extractor(body.url, timeout_s=timeout_s)
+    return SocidExtractorResponse(
+        found=result.found,
+        url=result.url,
+        fields=dict(result.fields),
+        error=result.error,
     )
 
 

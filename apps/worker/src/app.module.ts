@@ -19,7 +19,9 @@ import {
   SHERLOCK_PROVIDER,
   SherlockProviderModule,
   SOCIALSCAN_PROVIDER,
+  SOCID_EXTRACTOR_PROVIDER,
   SocialscanProviderModule,
+  SocidExtractorProviderModule,
   STUB_PROVIDERS,
   TELEGRAM_RESOLVE_PROVIDER,
   TelegramResolveProviderModule,
@@ -63,6 +65,7 @@ const isProd = process.env.NODE_ENV === "production"
         PhoneinfogaProviderModule.forRoot(),
         TelegramResolveProviderModule.forRoot(),
         TruecallerProviderModule.forRoot(),
+        SocidExtractorProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -76,6 +79,7 @@ const isProd = process.env.NODE_ENV === "production"
         PHONEINFOGA_PROVIDER,
         TELEGRAM_RESOLVE_PROVIDER,
         TRUECALLER_PROVIDER,
+        SOCID_EXTRACTOR_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -89,6 +93,7 @@ const isProd = process.env.NODE_ENV === "production"
         phoneinfoga: OsintProvider,
         telegramResolve: OsintProvider,
         truecaller: OsintProvider,
+        socidExtractor: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -102,6 +107,7 @@ const isProd = process.env.NODE_ENV === "production"
           phoneinfoga,
           telegramResolve,
           truecaller,
+          socidExtractor,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },

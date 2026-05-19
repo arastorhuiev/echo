@@ -31,6 +31,10 @@ dependencies = [
     # Truecaller unofficial wrapper. Used only when
     # TRUECALLER_INSTALLATION_ID env var is set.
     "truecallerpy==0.1.6",
+    # socid-extractor — URL → site-specific IDs (130+ methods). Used
+    # in-process; fetches the URL via httpx then parses the response
+    # with the upstream library.
+    "socid-extractor==0.0.28",
 ]
 
 [project.optional-dependencies]
