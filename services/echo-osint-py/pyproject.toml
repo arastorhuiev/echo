@@ -35,6 +35,10 @@ dependencies = [
     # in-process; fetches the URL via httpx then parses the response
     # with the upstream library.
     "socid-extractor==0.0.28",
+    # ignorant (Megadose) — phone → social-presence on Instagram /
+    # Snapchat / Amazon. GPL-3.0 so we invoke as a subprocess (not an
+    # import) for the same "mere aggregation" reasoning as PhoneInfoga.
+    "ignorant==1.2",
 ]
 
 [project.optional-dependencies]

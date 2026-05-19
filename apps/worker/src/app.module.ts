@@ -8,6 +8,8 @@ import {
   GravatarProviderModule,
   HIBP_PROVIDER,
   HibpProviderModule,
+  IGNORANT_PROVIDER,
+  IgnorantProviderModule,
   MAIGRET_PROVIDER,
   MaigretProviderModule,
   type OsintProvider,
@@ -66,6 +68,7 @@ const isProd = process.env.NODE_ENV === "production"
         TelegramResolveProviderModule.forRoot(),
         TruecallerProviderModule.forRoot(),
         SocidExtractorProviderModule.forRoot(),
+        IgnorantProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
@@ -80,6 +83,7 @@ const isProd = process.env.NODE_ENV === "production"
         TELEGRAM_RESOLVE_PROVIDER,
         TRUECALLER_PROVIDER,
         SOCID_EXTRACTOR_PROVIDER,
+        IGNORANT_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
@@ -94,6 +98,7 @@ const isProd = process.env.NODE_ENV === "production"
         telegramResolve: OsintProvider,
         truecaller: OsintProvider,
         socidExtractor: OsintProvider,
+        ignorant: OsintProvider,
       ) => {
         const real = [
           sherlock,
@@ -108,6 +113,7 @@ const isProd = process.env.NODE_ENV === "production"
           telegramResolve,
           truecaller,
           socidExtractor,
+          ignorant,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]
       },

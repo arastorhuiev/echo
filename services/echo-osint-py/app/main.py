@@ -26,6 +26,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.ignorant_runner import DEFAULT_TIMEOUT_S as IGNORANT_DEFAULT_TIMEOUT_S
+from app.ignorant_runner import IgnorantEvent, run_ignorant
 from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
 from app.maigret_runner import MaigretEvent, run_maigret
 from app.phoneinfoga_runner import DEFAULT_TIMEOUT_S as PHONEINFOGA_DEFAULT_TIMEOUT_S
@@ -83,6 +85,13 @@ class SocialscanQuery(BaseModel):
 
 class SocidExtractorQuery(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
+
+
+class IgnorantQuery(BaseModel):
+    # Country dialling code WITHOUT the leading `+` (ignorant's positional convention).
+    country_code: str = Field(min_length=1, max_length=4, pattern=r"^\d+$")
+    # National-significant number digits only (no `+`, no spaces).
+    phone: str = Field(min_length=4, max_length=15, pattern=r"^\d+$")
 
 
 class SocidExtractorResponse(BaseModel):
@@ -236,6 +245,11 @@ def info() -> SidecarInfo:
                 category="username",
                 description="URL → site-specific IDs (~130 methods, post-processor for Sherlock/Maigret).",
             ),
+            ProviderInfo(
+                id="ignorant",
+                category="phone",
+                description="Phone → social presence on Instagram / Snapchat / Amazon (Megadose).",
+            ),
         ],
     )
 
@@ -380,6 +394,30 @@ def phonenumbers_run(body: PhonenumbersQuery) -> PhonenumbersResponse:
     )
 
 
+@app.post("/providers/ignorant/run")
+async def ignorant_run(
+    body: IgnorantQuery,
+    timeout_s: float = Query(default=IGNORANT_DEFAULT_TIMEOUT_S, gt=0, le=120),
+) -> StreamingResponse:
+    """Run ignorant on the given phone and stream per-platform events as SSE."""
+
+    async def stream() -> AsyncIterator[bytes]:
+        try:
+            async for event in run_ignorant(body.phone, body.country_code, timeout_s=timeout_s):
+                yield _ignorant_to_sse(event)
+                await anyio.sleep(0)
+        except Exception as err:  # noqa: BLE001
+            logger.exception("ignorant runner crashed")
+            yield _ignorant_to_sse(IgnorantEvent(kind="error", message=str(err)))
+
+    headers = {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(stream(), media_type="text/event-stream", headers=headers)
+
+
 @app.post("/providers/socid-extractor/run", response_model=SocidExtractorResponse)
 async def socid_extractor_run(
     body: SocidExtractorQuery,
@@ -400,6 +438,35 @@ async def socid_extractor_run(
         fields=dict(result.fields),
         error=result.error,
     )
+
+
+def _ignorant_to_sse(event: IgnorantEvent) -> bytes:
+    """Serialize one IgnorantEvent as an SSE `data:` frame.
+
+    Drops `None` fields so the wire payload stays compact and the Node
+    consumer can rely on a stable shape per `kind`.
+    """
+
+    payload: dict[str, object] = {"kind": event.kind}
+    if event.phone is not None:
+        payload["phone"] = event.phone
+    if event.platform is not None:
+        payload["platform"] = event.platform
+    if event.domain is not None:
+        payload["domain"] = event.domain
+    if event.method is not None:
+        payload["method"] = event.method
+    if event.exists is not None:
+        payload["exists"] = event.exists
+    if event.rate_limit is not None:
+        payload["rate_limit"] = event.rate_limit
+    if event.frequent_rate_limit is not None:
+        payload["frequent_rate_limit"] = event.frequent_rate_limit
+    if event.checked is not None:
+        payload["checked"] = event.checked
+    if event.message is not None:
+        payload["message"] = event.message
+    return f"data: {json.dumps(payload, separators=(',', ':'))}\n\n".encode()
 
 
 def _socialscan_to_sse(event: SocialscanEvent) -> bytes:
