@@ -1,4 +1,19 @@
 vars {
   apiBase: http://localhost:3000/api
   sidecarBase: http://localhost:8000
+
+  ~ Test subject — every `create-*` / `sidecar-*` request reads these.
+  ~ Swap them to retarget the whole collection at a different identity.
+  testUsername: efinswim
+  testEmail: efinswim@gmail.com
+  testPhone: +48537529192
+  ~ Same phone, split for providers that want digits-only positional
+  ~ args (ignorant) or ISO country (truecaller).
+  testPhoneCountryDial: 48
+  testPhoneNational: 537529192
+  testPhoneCountryIso: PL
+
+  ~ Static fixtures for URL-input providers. Safe to leave alone.
+  testImageUrl: https://raw.githubusercontent.com/ianare/exif-samples/master/jpg/gps/DSCN0010.jpg
+  testProfileUrl: https://t.me/durov
 }

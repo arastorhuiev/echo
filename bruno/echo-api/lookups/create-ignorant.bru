@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (ignorant FR +33)
+  name: lookups - create (ignorant)
   type: http
   seq: 9
 }
@@ -14,8 +14,8 @@ body:json {
   {
     "providerId": "ignorant",
     "query": {
-      "country_code": "33",
-      "phone": "644637111"
+      "country_code": "{{testPhoneCountryDial}}",
+      "phone": "{{testPhoneNational}}"
     }
   }
 }
@@ -35,7 +35,7 @@ docs {
   events; Final accumulates them. `exists: true` ⇒ the phone is
   registered on that platform.
 
-  Note the input format — `country_code` is the dialling code WITHOUT
-  the leading `+`, and `phone` is national-significant digits only
-  (matches ignorant's positional CLI convention).
+  Input format mirrors ignorant's positional CLI: `country_code` is
+  the dialling code WITHOUT the leading `+`, `phone` is the
+  national-significant digits.
 }

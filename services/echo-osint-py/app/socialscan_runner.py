@@ -106,14 +106,23 @@ async def run_socialscan(
             yield SocialscanEvent(kind="error", message=f"socialscan output read failed: {err}")
             return
 
-        if not isinstance(payload, list):
-            yield SocialscanEvent(kind="error", message="socialscan output was not a list")
+        # socialscan 2.x dumps `{ <query>: [entry, ...] }`; flatten it.
+        # Older versions wrote a flat list — keep tolerating that shape.
+        entries: list[dict[str, object]] = []
+        if isinstance(payload, list):
+            entries = [e for e in payload if isinstance(e, dict)]
+        elif isinstance(payload, dict):
+            for query_results in payload.values():
+                if isinstance(query_results, list):
+                    entries.extend(e for e in query_results if isinstance(e, dict))
+        else:
+            yield SocialscanEvent(
+                kind="error", message=f"socialscan output had unexpected shape: {type(payload).__name__}"
+            )
             return
 
         checked = 0
-        for entry in payload:
-            if not isinstance(entry, dict):
-                continue
+        for entry in entries:
             event = _parse_entry(entry)
             if event is None:
                 continue
@@ -139,22 +148,35 @@ async def run_socialscan(
 
 
 def _parse_entry(entry: dict[str, object]) -> SocialscanEvent | None:
-    """Turn one socialscan JSON dict into a `result` SocialscanEvent."""
+    """Turn one socialscan JSON dict into a `result` SocialscanEvent.
+
+    socialscan 2.x serialises booleans as the literal strings `"True"`
+    and `"False"`, not real JSON bools — keep tolerating real bools too
+    so an older socialscan or a test fixture still parses cleanly.
+    """
 
     query = entry.get("query")
     platform = entry.get("platform")
     if not isinstance(query, str) or not isinstance(platform, str):
         return None
-    available = entry.get("available")
-    valid = entry.get("valid")
-    success = entry.get("success")
     message = entry.get("message")
     return SocialscanEvent(
         kind="result",
         query=query,
         platform=platform,
-        available=bool(available) if isinstance(available, bool) else None,
-        valid=bool(valid) if isinstance(valid, bool) else None,
-        success=bool(success) if isinstance(success, bool) else None,
+        available=_coerce_bool(entry.get("available")),
+        valid=_coerce_bool(entry.get("valid")),
+        success=_coerce_bool(entry.get("success")),
         message=str(message) if isinstance(message, str) and message else None,
     )
+
+
+def _coerce_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        if value == "True":
+            return True
+        if value == "False":
+            return False
+    return None

@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (ghunt jane@example.com)
+  name: lookups - create (ghunt)
   type: http
   seq: 13
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "ghunt",
     "query": {
-      "email": "jane@example.com"
+      "email": "{{testEmail}}"
     }
   }
 }
@@ -31,11 +31,11 @@ vars:post-response {
 
 docs {
   Env-conditional on GHUNT_CREDS_PATH (and the file actually existing).
-  Without it, the Final carries `configured: false` + a RUNBOOK pointer.
-  With it set, returns the Google Maps reviews / profile picture / real
-  name (where the target has a Google account).
+  Without it, the Final carries `configured: false` + an OWNER_TODO.md
+  pointer. With it set, returns the Google Maps reviews / profile
+  picture / real name (where the target has a Google account).
 
-  If the Final shows `configured: true` + an "ghunt exited 1" error
+  If the Final shows `configured: true` + a "ghunt exited 1" error
   pointing at cookies — re-run `ghunt login` to refresh the creds.m
   file.
 }

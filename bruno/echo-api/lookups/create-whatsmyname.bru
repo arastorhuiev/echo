@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (whatsmyname anthropic)
+  name: lookups - create (whatsmyname)
   type: http
   seq: 15
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "whatsmyname",
     "query": {
-      "username": "anthropic"
+      "username": "{{testUsername}}"
     }
   }
 }

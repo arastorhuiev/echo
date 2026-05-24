@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (truecaller +44 UK)
+  name: lookups - create (truecaller)
   type: http
   seq: 8
 }
@@ -14,8 +14,8 @@ body:json {
   {
     "providerId": "truecaller",
     "query": {
-      "phone": "+442079460958",
-      "country_code": "GB"
+      "phone": "{{testPhone}}",
+      "country_code": "{{testPhoneCountryIso}}"
     }
   }
 }
@@ -32,8 +32,8 @@ vars:post-response {
 
 docs {
   Env-conditional on TRUECALLER_INSTALLATION_ID. Without the env, the
-  Final carries `configured: false` + a RUNBOOK pointer. With it set,
-  returns Truecaller's crowd-name + spam-score if known.
+  Final carries `configured: false` + an OWNER_TODO.md pointer. With
+  it set, returns Truecaller's crowd-name + spam-score if known.
 
   Smoke-test the first time you set the env: if you see HTTP-401 errors
   in the Final, the installationId has been invalidated and you need to

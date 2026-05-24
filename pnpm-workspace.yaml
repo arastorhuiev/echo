@@ -25,3 +25,7 @@ allowBuilds:
   # from package.json's "simple-git-hooks" block. Without this it falls
   # back to a manual `pnpm exec simple-git-hooks` step.
   simple-git-hooks: true
+  # sharp ships per-platform native binaries; Astro pulls it in via its
+  # image-optim pipeline. Postinstall just downloads the prebuilt
+  # binary for the current arch.
+  sharp: true

@@ -16,7 +16,7 @@ headers {
 
 body:json {
   {
-    "username": "anthropic"
+    "username": "{{testUsername}}"
   }
 }
 
@@ -26,5 +26,5 @@ docs {
 
       curl -N -X POST {{sidecarBase}}/providers/maigret/run \
         -H 'Content-Type: application/json' \
-        -d '{"username":"anthropic"}'
+        -d '{"username":"'"$TEST_USERNAME"'"}'
 }

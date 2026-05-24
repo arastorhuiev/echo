@@ -16,7 +16,7 @@ headers {
 
 body:json {
   {
-    "username": "anthropic"
+    "username": "{{testUsername}}"
   }
 }
 
@@ -27,5 +27,5 @@ docs {
 
       curl -N -X POST {{sidecarBase}}/providers/sherlock/run \
         -H 'Content-Type: application/json' \
-        -d '{"username":"anthropic"}'
+        -d '{"username":"'"$TEST_USERNAME"'"}'
 }

@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (phonenumbers +44 UK)
+  name: lookups - create (phonenumbers)
   type: http
   seq: 5
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "phonenumbers",
     "query": {
-      "phone": "+442079460958"
+      "phone": "{{testPhone}}"
     }
   }
 }
@@ -30,7 +30,7 @@ vars:post-response {
 }
 
 docs {
-  Validates a UK London fixed-line via libphonenumber. Pure in-process
-  offline lookup — the Final's `valid: true` should arrive within a
-  few ms. Use `stream-sherlock.bru` (or curl) to watch the SSE.
+  Validates the test phone via libphonenumber. Pure in-process offline
+  lookup — the Final's `valid: true` should arrive within a few ms.
+  Use `stream-sherlock.bru` (or curl) to watch the SSE.
 }

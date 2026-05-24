@@ -99,7 +99,26 @@ export class LookupsController {
     const lastEventIdHeader = req.headers["last-event-id"]
     const lastEventId = typeof lastEventIdHeader === "string" ? lastEventIdHeader : undefined
 
-    reply.raw.writeHead(200, SSE_HEADERS)
+    // `enableCors` in main.ts only decorates responses Nest sends via
+    // its reply abstraction. SSE writes to `reply.raw` directly to keep
+    // the stream uninterceptable, so we mirror the same localhost
+    // allowlist here — without it the browser EventSource rejects the
+    // response in dev (no ACAO header → CORS violation → onerror).
+    const origin = req.headers.origin
+    const corsHeaders: Record<string, string> = {}
+    if (typeof origin === "string") {
+      try {
+        const host = new URL(origin).hostname
+        if (host === "localhost" || host === "127.0.0.1") {
+          corsHeaders["Access-Control-Allow-Origin"] = origin
+          corsHeaders.Vary = "Origin"
+        }
+      } catch {
+        // malformed Origin — silently skip CORS headers
+      }
+    }
+
+    reply.raw.writeHead(200, { ...SSE_HEADERS, ...corsHeaders })
 
     const redisUrl = this.config.get("REDIS_URL")
     const stream = new LookupSseStream(redisUrl)

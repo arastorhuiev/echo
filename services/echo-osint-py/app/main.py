@@ -20,6 +20,7 @@ import json
 import logging
 import re
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 import anyio
 from fastapi import FastAPI, HTTPException, Query
@@ -37,7 +38,11 @@ from app.mailcat_runner import MailcatEvent, run_mailcat
 from app.maigret_runner import DEFAULT_TIMEOUT_S as MAIGRET_DEFAULT_TIMEOUT_S
 from app.maigret_runner import MaigretEvent, run_maigret
 from app.phoneinfoga_runner import DEFAULT_TIMEOUT_S as PHONEINFOGA_DEFAULT_TIMEOUT_S
-from app.phoneinfoga_runner import run_phoneinfoga
+from app.phoneinfoga_runner import (
+    run_phoneinfoga,
+    start_phoneinfoga,
+    stop_phoneinfoga,
+)
 from app.phonenumbers_runner import run_phonenumbers
 from app.sherlock_runner import DEFAULT_TIMEOUT_S, SherlockEvent, run_sherlock
 from app.socialscan_runner import DEFAULT_TIMEOUT_S as SOCIALSCAN_DEFAULT_TIMEOUT_S
@@ -249,7 +254,24 @@ class PhonenumbersResponse(BaseModel):
     parse_error: str | None
 
 
-app = FastAPI(title="echo-osint-py", version=SIDECAR_VERSION)
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Start/stop long-lived child processes the runners depend on.
+
+    Right now that's only `phoneinfoga serve` — every other runner spawns
+    a one-shot per request. Boot failure here SHOULD surface (the sidecar
+    won't pass its healthcheck), since PhoneInfoga is in the active
+    catalog and its absence is a deployment bug, not a degraded mode.
+    """
+
+    await start_phoneinfoga()
+    try:
+        yield
+    finally:
+        await stop_phoneinfoga()
+
+
+app = FastAPI(title="echo-osint-py", version=SIDECAR_VERSION, lifespan=lifespan)
 
 
 @app.get("/health")

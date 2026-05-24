@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (mailcat anthropic)
+  name: lookups - create (mailcat)
   type: http
   seq: 18
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "mailcat",
     "query": {
-      "username": "anthropic"
+      "username": "{{testUsername}}"
     }
   }
 }
@@ -33,7 +33,7 @@ docs {
   Env-conditional on MAILCAT_INSTALL_PATH (a clone of sharsil/mailcat
   with requirements installed, typically mounted into the sidecar via
   docker-compose volume). Without it, the Final carries an error
-  pointing at RUNBOOK. With it, streams Partial per existing email
-  address; Final's `found` field is the convenience list of just the
-  `exists: true` entries.
+  pointing at OWNER_TODO.md. With it, streams Partial per existing
+  email address; Final's `found` field is the convenience list of
+  just the `exists: true` entries.
 }

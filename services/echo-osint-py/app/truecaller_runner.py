@@ -81,32 +81,44 @@ async def run_truecaller(
             error=f"truecallerpy import failed: {err}",
         )
 
-    # `search_phonenumber` is sync; offload to a thread so we don't block
-    # the FastAPI event loop. We pass timeout_s as an upper bound for the
-    # whole call (cleanest cancellation point we have without patching
-    # the library).
-    def _do_search() -> object:
-        # truecallerpy < 0.2 exposes search_phonenumber(search_query=..., country_code=..., installation_id=...);
-        # later versions may move things around. We call the documented
-        # function and let any AttributeError surface as a clean error.
-        fn = getattr(truecallerpy, "search_phonenumber", None)
-        if fn is None:
-            raise AttributeError(
-                "truecallerpy.search_phonenumber not found — library API drift?"
-            )
-        return fn(
-            search_query=phone,
-            country_code=country_code or "ZZ",
-            installation_id=installation_id,
+    # truecallerpy 1.0.x exposes `search_phonenumber` as an async coroutine
+    # with camelCase kwargs (phoneNumber / countryCode / installationId).
+    # `wait_for` enforces our timeout bound — the library's own httpx
+    # client has its own 5s default but we still want a clean ceiling.
+    fn = getattr(truecallerpy, "search_phonenumber", None)
+    if fn is None:
+        return TruecallerResult(
+            configured=True,
+            found=False,
+            error="truecallerpy.search_phonenumber not found — library API drift?",
         )
 
     try:
-        raw = await asyncio.wait_for(asyncio.to_thread(_do_search), timeout=timeout_s)
+        raw = await asyncio.wait_for(
+            fn(
+                phoneNumber=phone,
+                countryCode=country_code or "ZZ",
+                installationId=installation_id,
+            ),
+            timeout=timeout_s,
+        )
     except TimeoutError:
         return TruecallerResult(configured=True, found=False, error="truecallerpy timed out")
     except Exception as err:  # noqa: BLE001
         logger.exception("truecallerpy crashed")
         return TruecallerResult(configured=True, found=False, error=f"truecallerpy error: {err}")
+
+    # 1.0.x swallows httpx errors into a sibling envelope rather than
+    # raising — propagate that as our own `error` so the UI sees the
+    # real cause (HTTP 401 = banned installationId, 5xx = upstream
+    # outage, etc.) instead of a generic "no result".
+    if isinstance(raw, dict) and isinstance(raw.get("error"), str):
+        message = raw.get("message") if isinstance(raw.get("message"), str) else raw["error"]
+        status = raw.get("status_code")
+        suffix = f" (HTTP {status})" if isinstance(status, int) else ""
+        return TruecallerResult(
+            configured=True, found=False, error=f"truecallerpy error: {message}{suffix}"
+        )
 
     return _normalise(raw)
 

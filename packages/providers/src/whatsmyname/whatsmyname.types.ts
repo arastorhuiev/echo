@@ -34,8 +34,11 @@ export const wmnSiteSchema = z.object({
   uri_check: z.string().min(1),
   uri_pretty: z.string().optional(),
   e_code: z.number().int(),
-  e_string: z.string().min(1),
-  m_string: z.string().min(1),
+  // Some upstream entries ship empty `e_string` / `m_string`. The runner
+  // already short-circuits on those (`isMatch === undefined`), so the
+  // schema just has to accept them rather than failing dataset load.
+  e_string: z.string(),
+  m_string: z.string(),
   m_code: z.number().int(),
   known: z.array(z.string()).optional(),
   cat: z.string(),

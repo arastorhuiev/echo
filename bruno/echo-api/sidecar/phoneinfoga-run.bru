@@ -12,7 +12,7 @@ post {
 
 body:json {
   {
-    "phone": "+442079460958"
+    "phone": "{{testPhone}}"
   }
 }
 
@@ -23,8 +23,9 @@ assert {
 }
 
 docs {
-  Direct hit to the phoneinfoga Go-binary subprocess runner. Returns
-  sync JSON with `local_scanner` (carrier metadata) and `google_dorks`
-  (5-10 ready-to-click URLs). Subprocess errors land in `error`
+  Direct hit to the sidecar's phoneinfoga REST-proxy runner. Returns
+  sync JSON with `local_scanner` (country + dial code) and
+  `google_dorks` (~10-30 ready-to-click search URLs). HTTP errors
+  against the in-container `phoneinfoga serve` API land in `error`
   rather than 5xx.
 }

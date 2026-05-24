@@ -1,0 +1,16 @@
+---
+import Layout from "../layouts/Layout.astro"
+import ProviderConsole from "../components/ProviderConsole.svelte"
+---
+
+<Layout title="echo · console">
+  <section class="grid gap-2 mb-8">
+    <h1 class="text-2xl text-zinc-100">Provider console</h1>
+    <p class="text-sm text-zinc-400 max-w-2xl">
+      Minimal UI for running every echo provider end-to-end against the local stack. Pick a
+      provider, tweak the fields, and watch the SSE stream resolve into a Final or Failed event.
+      Env-conditional providers (Truecaller, Telegram, GHunt, mailcat) need creds in <code class="text-zinc-300">.env</code> first — see <code class="text-zinc-300">OWNER_TODO.md</code>.
+    </p>
+  </section>
+  <ProviderConsole client:only="svelte" />
+</Layout>

@@ -19,6 +19,26 @@ and `http://localhost:8000` for the Python sidecar. Override either with
 `bru run --env-var apiBase=https://staging.echo.example/api ...` when
 hitting a non-local stack.
 
+## Test subject
+
+Every `create-*` / `sidecar-*` request reads the test target from the
+environment so a single edit retargets the whole collection. The vars
+live in `environments/local.bru`:
+
+| var | default | used by |
+|---|---|---|
+| `testUsername` | `efinswim` | sherlock, maigret, whatsmyname, socialscan, mailcat |
+| `testEmail` | `efinswim@gmail.com` | ghunt, socialscan |
+| `testPhone` | `+48537529192` | phonenumbers, phoneinfoga, telegram-resolve, truecaller |
+| `testPhoneCountryDial` | `48` | ignorant (`country_code` positional, no `+`) |
+| `testPhoneNational` | `537529192` | ignorant (`phone` positional, digits only) |
+| `testPhoneCountryIso` | `PL` | truecaller (`country_code` ISO-2) |
+| `testProfileUrl` | `https://t.me/durov` | socid-extractor |
+| `testImageUrl` | (ianare EXIF sample) | exiftool |
+
+Swap the value in `environments/local.bru` to retarget; the requests
+themselves stay intact.
+
 ## Folder layout
 
 - `lookups/` — `/api/lookups` lifecycle: one `create-<provider>.bru` per
@@ -52,9 +72,7 @@ Sidecar-backed providers additionally have a `<id>-run.bru` under
 
 | Provider | API request | Sidecar direct |
 |---|---|---|
-| `gravatar` | `lookups/create-gravatar.bru` | — (HTTP-fetch, no sidecar) |
 | `hibp-pwned-passwords` | `lookups/create-hibp.bru` | — (HTTP-fetch, no sidecar) |
-| `emailrep` | `lookups/create-emailrep.bru` | — (HTTP-fetch, no sidecar) |
 | `ghunt` † | `lookups/create-ghunt.bru` | `sidecar/ghunt-run.bru` |
 
 ### Username
@@ -72,18 +90,11 @@ Sidecar-backed providers additionally have a `<id>-run.bru` under
 
 | Provider | API request | Sidecar direct |
 |---|---|---|
-| `saucenao` | `lookups/create-saucenao.bru` | — (HTTP-fetch, no sidecar) |
 | `exiftool` | `lookups/create-exiftool.bru` | `sidecar/exiftool-run.bru` |
-
-### Breach
-
-| Provider | API request | Sidecar direct |
-|---|---|---|
-| `hibp-pwned-passwords` | `lookups/create-hibp.bru` | — (HTTP-fetch, no sidecar) |
 
 **†** = env-conditional. Without the relevant env vars set, the Final
 carries `configured: false` plus an instructive error pointing at
-`docs/RUNBOOK.md` → Provider credentials.
+`OWNER_TODO.md` (locally) / `docs/RUNBOOK.md` (committed).
 
 ## Generic helpers
 
@@ -101,6 +112,8 @@ carries `configured: false` plus an instructive error pointing at
 ## How to add a new provider
 
 1. Add `lookups/create-<id>.bru` modelled on the closest existing request.
+   Use the `testUsername` / `testEmail` / `testPhone` vars rather than
+   hardcoding values.
 2. If the provider lives in the Python sidecar, add `sidecar/<id>-run.bru`
    too.
 3. Update this README's coverage table and `docs/PROVIDERS.md`'s

@@ -2,14 +2,10 @@ import { type AppConfigService, ConfigModule } from "@echo/config"
 import { DbModule, RedisModule } from "@echo/nest"
 import { buildLoggerConfig } from "@echo/observability"
 import {
-  EMAILREP_PROVIDER,
-  EmailrepProviderModule,
   EXIFTOOL_PROVIDER,
   ExiftoolProviderModule,
   GHUNT_PROVIDER,
   GhuntProviderModule,
-  GRAVATAR_PROVIDER,
-  GravatarProviderModule,
   HIBP_PROVIDER,
   HibpProviderModule,
   IGNORANT_PROVIDER,
@@ -24,8 +20,6 @@ import {
   PHONENUMBERS_PROVIDER,
   PhoneinfogaProviderModule,
   PhonenumbersProviderModule,
-  SAUCENAO_PROVIDER,
-  SaucenaoProviderModule,
   SHERLOCK_PROVIDER,
   SherlockProviderModule,
   SOCIALSCAN_PROVIDER,
@@ -65,9 +59,7 @@ const isProd = process.env.NODE_ENV === "production"
     OsintProviderRegistryModule.forRootAsync({
       imports: [
         SherlockProviderModule.forRoot(),
-        GravatarProviderModule.forRoot(),
         HibpProviderModule.forRoot(),
-        EmailrepProviderModule.forRoot(),
         WhatsmynameProviderModule.forRoot(),
         PhonenumbersProviderModule.forRoot(),
         MaigretProviderModule.forRoot(),
@@ -79,14 +71,11 @@ const isProd = process.env.NODE_ENV === "production"
         IgnorantProviderModule.forRoot(),
         GhuntProviderModule.forRoot(),
         MailcatProviderModule.forRoot(),
-        SaucenaoProviderModule.forRoot(),
         ExiftoolProviderModule.forRoot(),
       ],
       inject: [
         SHERLOCK_PROVIDER,
-        GRAVATAR_PROVIDER,
         HIBP_PROVIDER,
-        EMAILREP_PROVIDER,
         WHATSMYNAME_PROVIDER,
         PHONENUMBERS_PROVIDER,
         MAIGRET_PROVIDER,
@@ -98,14 +87,11 @@ const isProd = process.env.NODE_ENV === "production"
         IGNORANT_PROVIDER,
         GHUNT_PROVIDER,
         MAILCAT_PROVIDER,
-        SAUCENAO_PROVIDER,
         EXIFTOOL_PROVIDER,
       ],
       useFactory: (
         sherlock: OsintProvider,
-        gravatar: OsintProvider,
         hibp: OsintProvider,
-        emailrep: OsintProvider,
         whatsmyname: OsintProvider,
         phonenumbers: OsintProvider,
         maigret: OsintProvider,
@@ -117,14 +103,11 @@ const isProd = process.env.NODE_ENV === "production"
         ignorant: OsintProvider,
         ghunt: OsintProvider,
         mailcat: OsintProvider,
-        saucenao: OsintProvider,
         exiftool: OsintProvider,
       ) => {
         const real = [
           sherlock,
-          gravatar,
           hibp,
-          emailrep,
           whatsmyname,
           phonenumbers,
           maigret,
@@ -136,7 +119,6 @@ const isProd = process.env.NODE_ENV === "production"
           ignorant,
           ghunt,
           mailcat,
-          saucenao,
           exiftool,
         ]
         return isProd ? real : [...real, ...STUB_PROVIDERS]

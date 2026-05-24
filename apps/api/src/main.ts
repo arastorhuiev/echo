@@ -21,6 +21,22 @@ async function bootstrap(): Promise<void> {
   })
   app.useLogger(app.get(Logger))
   app.setGlobalPrefix("api")
+  // Allow the Astro dev frontend (apps/web, defaults to :4321) and any
+  // sibling tooling on localhost to call /api from the browser. In
+  // production a reverse proxy will serve same-origin so this stays a
+  // dev-time convenience.
+  app.enableCors({
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true)
+      try {
+        const host = new URL(origin).hostname
+        cb(null, host === "localhost" || host === "127.0.0.1")
+      } catch {
+        cb(null, false)
+      }
+    },
+    credentials: false,
+  })
   // Auto-validates every @Body()/@Param()/@Query() parameter typed as a
   // `createZodDto`-derived class. Malformed payloads return a structured
   // 400 instead of bubbling up as deep-stack TypeErrors.

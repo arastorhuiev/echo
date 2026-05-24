@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (socialscan anthropic)
+  name: lookups - create (socialscan)
   type: http
   seq: 16
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "socialscan",
     "query": {
-      "queries": ["anthropic"]
+      "queries": ["{{testUsername}}", "{{testEmail}}"]
     }
   }
 }

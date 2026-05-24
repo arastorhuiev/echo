@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (phoneinfoga +44 UK)
+  name: lookups - create (phoneinfoga)
   type: http
   seq: 6
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "phoneinfoga",
     "query": {
-      "phone": "+442079460958"
+      "phone": "{{testPhone}}"
     }
   }
 }
@@ -30,7 +30,7 @@ vars:post-response {
 }
 
 docs {
-  Spawns the phoneinfoga v2.11.0 Go binary in the sidecar. Result is a
-  Final with local-scanner metadata (carrier/line type) plus ~5-10
-  Google dork URLs. Sidecar boot ~250-500ms; expect ~2s wall-clock.
+  Hits the in-container `phoneinfoga serve` REST API (started by the
+  sidecar's FastAPI lifespan). Result is a Final with local-scanner
+  metadata (country/dial code) plus ~10-30 Google dork URLs.
 }

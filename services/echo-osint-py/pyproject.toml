@@ -11,7 +11,10 @@ dependencies = [
     # Sherlock is a CLI; we invoke it as `python -u -m sherlock_project`.
     # Pinned because the site list rotates fast — bump deliberately.
     "sherlock-project==0.15.0",
-    "httpx==0.28.1",
+    # Held at 0.27.2 because ghunt 2.3.3 pins httpx>=0.27.2,<0.28.0;
+    # our own runners only use basic AsyncClient/get/post which are
+    # stable across the 0.27 line.
+    "httpx==0.27.2",
     "pydantic==2.10.4",
     # libphonenumber Python port (David Drysdale, Apache-2.0). Used
     # in-process by phonenumbers_runner; no subprocess.
@@ -30,7 +33,10 @@ dependencies = [
     "telethon==1.39.0",
     # Truecaller unofficial wrapper. Used only when
     # TRUECALLER_INSTALLATION_ID env var is set.
-    "truecallerpy==0.1.6",
+    # 1.0.x is async; 0.1.x was removed from PyPI in 2026 so we can't
+    # pin the older sync API any more. The runner calls
+    # `await search_phonenumber(...)` directly — see truecaller_runner.py.
+    "truecallerpy==1.0.3",
     # socid-extractor — URL → site-specific IDs (130+ methods). Used
     # in-process; fetches the URL via httpx then parses the response
     # with the upstream library.

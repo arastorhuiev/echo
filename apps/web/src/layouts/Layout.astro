@@ -1,0 +1,56 @@
+---
+import "../styles/global.css"
+
+interface Props {
+  title?: string
+}
+
+const { title = "echo" } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100">
+    <header class="border-b border-zinc-800">
+      <div class="max-w-5xl mx-auto px-6 py-4 flex items-center gap-6">
+        <a href="/" class="font-mono text-lg text-zinc-100 hover:text-emerald-300 transition-colors">echo</a>
+        <nav class="flex gap-4 text-sm text-zinc-400">
+          <a href="/" class="hover:text-zinc-100 transition-colors">Console</a>
+          <a
+            href="http://localhost:3000/api/providers"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-100 transition-colors"
+          >
+            Providers JSON ↗
+          </a>
+          <a
+            href="http://localhost:8000/info"
+            target="_blank"
+            rel="noopener"
+            class="hover:text-zinc-100 transition-colors"
+          >
+            Sidecar info ↗
+          </a>
+        </nav>
+        <span class="ml-auto text-xs text-zinc-500 font-mono">localhost:4321</span>
+      </div>
+    </header>
+    <main class="max-w-5xl mx-auto px-6 py-8">
+      <slot />
+    </main>
+    <footer class="max-w-5xl mx-auto px-6 py-6 text-xs text-zinc-500 border-t border-zinc-900 mt-12">
+      echo · local dev frontend ·
+      <a href="https://docs.astro.build" class="hover:text-zinc-300" target="_blank" rel="noopener">Astro</a>
+      ·
+      <a href="https://svelte.dev" class="hover:text-zinc-300" target="_blank" rel="noopener">Svelte</a>
+      ·
+      <a href="https://tailwindcss.com" class="hover:text-zinc-300" target="_blank" rel="noopener">Tailwind</a>
+    </footer>
+  </body>
+</html>

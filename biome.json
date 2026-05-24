@@ -18,7 +18,8 @@
       "!.omc/state",
       "!.omc/sessions",
       "!packages/*/migrations",
-      "!**/_meta"
+      "!**/_meta",
+      "!apps/web"
     ]
   },
   "formatter": {

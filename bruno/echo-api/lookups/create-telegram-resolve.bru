@@ -1,5 +1,5 @@
 meta {
-  name: lookups - create (telegram-resolve +44 UK)
+  name: lookups - create (telegram-resolve)
   type: http
   seq: 7
 }
@@ -14,7 +14,7 @@ body:json {
   {
     "providerId": "telegram-resolve",
     "query": {
-      "phone": "+442079460958"
+      "phone": "{{testPhone}}"
     }
   }
 }
@@ -32,7 +32,7 @@ vars:post-response {
 docs {
   Env-conditional. Without TELEGRAM_API_ID / TELEGRAM_API_HASH /
   TELEGRAM_SESSION_PATH set, the Final's `configured: false` flag
-  arrives with a "see RUNBOOK" error string — the lookup still
-  completes cleanly. With creds set, returns a slim Telegram profile
-  if the number is registered there.
+  arrives with an OWNER_TODO.md pointer — the lookup still completes
+  cleanly. With creds set, returns a slim Telegram profile if the
+  number is registered there.
 }
