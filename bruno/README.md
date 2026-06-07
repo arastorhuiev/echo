@@ -94,7 +94,7 @@ Sidecar-backed providers additionally have a `<id>-run.bru` under
 
 **†** = env-conditional. Without the relevant env vars set, the Final
 carries `configured: false` plus an instructive error pointing at
-`OWNER_TODO.md` (locally) / `docs/RUNBOOK.md` (committed).
+`docs/OWNER_TODO.md` / `docs/RUNBOOK.md`.
 
 ## Generic helpers
 

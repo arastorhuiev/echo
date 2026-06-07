@@ -145,7 +145,7 @@ image (`docker compose build osint-py`) fixes it.
    `done` / `terminate` / `kill` with the relevant identifiers.
 3. For env-conditional providers (truecaller, telegram, ghunt,
    mailcat), the most common failure is `configured: false` — that's
-   not a bug, that's the env var being unset. See `OWNER_TODO.md` for
+   not a bug, that's the env var being unset. See `docs/OWNER_TODO.md` for
    the one-time setup flow.
 
 ### "Provider X expects feature Y but got Z" / schema validation fails
@@ -217,5 +217,5 @@ Default Bruno preset hits `efinswim` / `efinswim@gmail.com` /
 - **Sidecar routes:** `services/echo-osint-py/app/main.py`
 - **Bruno requests:** `bruno/echo-api/{lookups,sidecar}/<id>*.bru`
 - **Conformance test:** `packages/providers/src/core/conformance.ts`
-- **OWNER_TODO.md** (gitignored): one-time setup actions for
+- **docs/OWNER_TODO.md**: one-time setup actions for
   env-conditional providers.

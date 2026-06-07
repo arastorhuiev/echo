@@ -120,7 +120,7 @@ Rate-limits: ~100–200 resolves/day per session before `FLOOD_WAIT`. When that 
    ```env
    TRUECALLER_INSTALLATION_ID=aXXX-XXXX-XXXX
    ```
-4. **Smoke-test** — see [p8-final-plan REV-3 § 4](./research/p8-final-plan-2026-05-19-ru.md). Trigger one lookup against a known number; if the route returns `error: "truecallerpy error: HTTP 401"` the `installationId` has been invalidated (Truecaller occasionally bans). Re-run the login flow with a fresh SIM.
+4. **Smoke-test** — see [p8-plan REV-3 § 4](./research/p8-plan.md). Trigger one lookup against a known number; if the route returns `error: "truecallerpy error: HTTP 401"` the `installationId` has been invalidated (Truecaller occasionally bans). Re-run the login flow with a fresh SIM.
 
 Rate-limits: empirically ~100–200 lookups/day per `installationId` before bans. Cache aggressively (`cacheTtlSec` is already 6 hours).
 

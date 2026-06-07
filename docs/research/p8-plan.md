@@ -19,10 +19,10 @@
 >
 > **Скоуп:** только библиотеки и API-провайдеры. Бизнес/бюджет/парсеры в этом документе **нет**.
 >
-> **Связанные файлы:**
-> - `docs/research/phone-providers-shortlist-2026-05-19-ru.md` — расширенные I/O-примеры по phone-провайдерам (живой supporting-doc, в P8a Foundation refer'имся туда за полным шорт-листом).
-> - `docs/research/osint-providers-extended-2026-05-18.md` — исходный исследовательский каталог (~40k токенов EN+UA addendum). Часть выводов уже сапёрсиднута этим документом; остаётся в репо как **read-only архив** того, что было пересмотрено.
-> - Удалены в REV-2: `osint-providers-decision-2026-05-18-ru.md`, `free-libs-expansion-2026-05-19-ru.md`. Содержимое либо вошло сюда, либо явно отброшено.
+> **Связанные файлы:** канонический каталог провайдеров теперь — `docs/PROVIDERS.md`.
+> Исходные research-черновики (`phone-providers-shortlist`, `osint-providers-extended`,
+> `osint-providers-decision`, `free-libs-expansion`) удалены после консолидации их
+> выводов в `docs/PROVIDERS.md` и этот документ — при необходимости доступны в git history.
 
 ---
 

@@ -402,13 +402,13 @@ Per owner request: before any work that would commit the codebase to Effect-TS, 
 
 **Status:** P8a in progress (started 2026-05-19) — 11 of 12 active providers shipped on branch `phase/p8a-foundation`; mailcat deferred to end-of-P8a.
 **Estimated size:** 2–3 days original; P8a alone ran ~7 incremental commits.
-**Canonical plan:** [`docs/research/p8-final-plan-2026-05-19-ru.md`](./research/p8-final-plan-2026-05-19-ru.md) (REV-3) — supersedes the original P8 task list below.
+**Canonical plan:** [`docs/research/p8-plan.md`](./research/p8-plan.md) (REV-3) — supersedes the original P8 task list below.
 
 ### Inputs
 - P7 done.
 - P7a done (proxy gateway scaffold available for scrape-based providers).
 - [`PROVIDERS.md`](./PROVIDERS.md) populated by the research pass.
-- P8 research consolidated in `docs/research/p8-final-plan-2026-05-19-ru.md` (REV-3) — read this first.
+- P8 research consolidated in `docs/research/p8-plan.md` (REV-3) — read this first.
 
 ### P8a — Foundation (in progress)
 

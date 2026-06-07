@@ -9,7 +9,7 @@ operational caveats.
 > owner decision), `saucenao` (free tier still requires API key registration).
 > Free, env-conditional providers (`truecaller`, `telegram-resolve`,
 > `ghunt`, `mailcat`) stay — they only need disposable creds, not paid
-> keys. See `OWNER_TODO.md` for the one-time setup flows.
+> keys. See `docs/OWNER_TODO.md` for the one-time setup flows.
 
 ## Common conventions
 
@@ -151,7 +151,7 @@ in `bruno/echo-api/environments/local.bru`:
   convenience list of `exists: true` entries.
 - **Files:** `packages/providers/src/mailcat/` + `services/echo-osint-py/app/mailcat_runner.py`
 - **Bruno:** `lookups/create-mailcat.bru` + `sidecar/mailcat-run.bru`
-- **Setup:** see `OWNER_TODO.md` — clone repo, `pip install -r requirements.txt`,
+- **Setup:** see `docs/OWNER_TODO.md` — clone repo, `pip install -r requirements.txt`,
   mount path into the container.
 
 ---
@@ -222,7 +222,7 @@ in `bruno/echo-api/environments/local.bru`:
   return `found_on_telegram: false` even when they exist on Telegram —
   by design. ResolvePhone adds the contact on our side; runner always
   deletes it on exit.
-- **Setup:** see `OWNER_TODO.md`.
+- **Setup:** see `docs/OWNER_TODO.md`.
 
 ### truecaller † env-conditional
 
@@ -245,7 +245,7 @@ in `bruno/echo-api/environments/local.bru`:
 - **Caveats:** unofficial wrapper. ToS-violating (UI must label this
   as "crowd-sourced from Truecaller"). HTTP-401 errors indicate the
   installationId was banned; re-run SMS login on a fresh SIM.
-- **Setup:** see `OWNER_TODO.md`.
+- **Setup:** see `docs/OWNER_TODO.md`.
 
 ### ignorant
 
@@ -307,7 +307,7 @@ in `bruno/echo-api/environments/local.bru`:
 - **Caveats:** stale Google cookies → 401 in stderr; re-run `ghunt
   login`. Runner pins httpx to 0.27.2 because ghunt 2.3.3 requires
   `httpx<0.28`.
-- **Setup:** see `OWNER_TODO.md`.
+- **Setup:** see `docs/OWNER_TODO.md`.
 
 ---
 

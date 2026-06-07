@@ -12,8 +12,10 @@ OSINT aggregator backend. Wraps free OSINT tools (Sherlock, Maigret, etc.) behin
 | [`docs/AGENT_PLAN.md`](./docs/AGENT_PLAN.md) | Phase-by-phase execution plan designed for an executor agent (or human). |
 | [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) | OSINT provider catalog — what each provider does and where it slots in. |
 | [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) | Operational quick reference — how to deploy, debug, recover. |
+| [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) | Local development guide — running the stack and providers on your machine. |
+| [`docs/SMOKE_TEST.md`](./docs/SMOKE_TEST.md) | Step-by-step local smoke run of the API (copy-paste commands). |
+| [`docs/OWNER_TODO.md`](./docs/OWNER_TODO.md) | One-time owner setup actions (credentials for env-conditional providers). |
 | [`docs/adr/`](./docs/adr/) | Architecture Decision Records — every load-bearing choice, why, and what was rejected. |
-| [`.omc/plans/`](./.omc/plans/) | Brainstorm history (three alternative plans + revisions). Not load-bearing — kept for context. |
 
 ## Stack at a glance
 

@@ -53,7 +53,7 @@ A **conformance test factory** (`@echo/providers/core/conformance.ts`) is export
 ## Alternatives considered
 
 - **Per-provider Nest modules with no abstraction.** Drift sets in fast — different cache strategies, different retry policies, no uniform tracing. Rejected.
-- **Microservice per provider** (Plan C in `.omc/plans/`). Solo overhead too high.
+- **Microservice per provider** (the rejected "Plan C" from early brainstorming). Solo overhead too high.
 - **Function-shaped providers** (`(Q) => Promise<R>`) — loses streaming progress.
 
 ## Triggers to reconsider
