@@ -85,7 +85,7 @@ psql $DATABASE_URL -c "UPDATE providers SET breaker_state='closed', breaker_open
 
 ### Add a new OSINT provider
 
-Each provider lives in `packages/providers/src/<id>/` with files `<id>.ts`, `<id>.types.ts`, `<id>.module.ts`, `<id>.test.ts`, `index.ts`. If the provider needs a Python tool, add the runner module to `services/echo-osint-py/app/<id>_runner.py` and a FastAPI route in `app/main.py`. Register the provider in both `apps/api/src/app.module.ts` and `apps/worker/src/app.module.ts`. Update `docs/PROVIDERS.md` with a status card and add the env vars (if any) to `.env.example`. The P8a commits on `phase/p8a-foundation` are good worked examples covering HTTP-fetch, in-process Python, subprocess Python, and Go-binary subprocess patterns.
+Each provider lives in `packages/providers/src/<id>/` with files `<id>.ts`, `<id>.types.ts`, `<id>.module.ts`, `<id>.test.ts`, `index.ts`. If the provider needs a Python tool, add the runner module to `services/echo-osint-py/app/<id>_runner.py` and a FastAPI route in `app/main.py`. Register the provider in both `apps/api/src/app.module.ts` and `apps/worker/src/app.module.ts`. Update `docs/PROVIDERS.md` with a status card and add the env vars (if any) to `.env.providers.example` (provider creds) — infrastructure vars go in `.env.example`. The P8a commits on `phase/p8a-foundation` are good worked examples covering HTTP-fetch, in-process Python, subprocess Python, and Go-binary subprocess patterns.
 
 ### Provider credentials (env-conditional providers)
 
@@ -97,7 +97,7 @@ A subset of providers register but stay dormant until env vars are present. With
 2. **Provision a disposable SIM** — buy a one-shot phone number from a reseller (e.g. 5sim.net or sms-activate.org, ~$0.30 in 2026). Register a fresh Telegram account on that number through any official client.
 3. **Capture a session file** — one-time, interactive. Run `python -c "from telethon.sync import TelegramClient; TelegramClient('/tmp/session', <api_id>, '<api_hash>').start()"` on a workstation, enter the SMS code Telegram sends to your disposable SIM. The resulting `/tmp/session.session` file IS the credential.
 4. **Move the session file to the server** (chmod 600). The path becomes `TELEGRAM_SESSION_PATH`.
-5. **Set env vars** in `.env`:
+5. **Set env vars** in `.env.providers`:
    ```env
    TELEGRAM_API_ID=12345
    TELEGRAM_API_HASH=abc123def456...
@@ -116,7 +116,7 @@ Rate-limits: ~100–200 resolves/day per session before `FLOOD_WAIT`. When that 
    truecallerpy --login
    ```
    Enter your disposable phone number, country code, and the OTP Truecaller sends via SMS. The command prints the `installationId` on success.
-3. **Set the env var** in `.env`:
+3. **Set the env var** in `.env.providers`:
    ```env
    TRUECALLER_INSTALLATION_ID=aXXX-XXXX-XXXX
    ```

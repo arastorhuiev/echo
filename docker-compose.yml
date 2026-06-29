@@ -97,6 +97,13 @@ services:
       dockerfile: Dockerfile
     container_name: echo-osint-py
     restart: unless-stopped
+    # OSINT provider credentials live in `.env.providers` (optional, git-ignored)
+    # so the whole credential layer is one deletable unit. `required: false`
+    # means an absent file is fine — env-conditional providers just report
+    # `configured=false`. Infrastructure config stays in `.env` / this file.
+    env_file:
+      - path: ./.env.providers
+        required: false
     environment:
       # Outbound proxy wiring — empty by default → sidecar goes direct.
       # When the "proxy" profile is active AND HTTPS_PROXY is set in .env,
