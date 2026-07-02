@@ -14,7 +14,7 @@
 - **What echo is:** a cheap freemium **person-lookup** OSINT aggregator (email / phone / username → an aggregated report about a person), modeled on but undercutting osint.industries / claritycheck. **Not** domain/company recon.
 - **Where we are:** the *engine* is done (P0–P8: 14 providers, SSE streaming, real Redis cache). The *product layers* are not: no guardrails (rate-limit/breaker/single-flight are noop stubs, sidecar has **zero** concurrency caps → a Maigret loop OOMs the box), no aggregation/"search" layer (today 1 lookup = 1 provider), no auth, no payments.
 - **What's locked (owner decisions):** payments **last** (a stub keeps results always testable); a **light ops/admin** surface (Bull-Board + `/admin` JSON, no consumer web); providers **free-only** (no paid APIs) pruned to **user-scanner + Hudson Rock**; hosting **CX42 16 GB** with one-command fallback to **CX32 8 GB**; positioning **person-lookup**.
-- **First action to pick tomorrow:** **P9a** (safety floor — sidecar semaphores + mem_limits; recommended first, unblocks everything) *or* **P8f-1** (finish the GHunt login fix on the current branch).
+- **First action to pick tomorrow:** **P9b-core** (per-provider BullMQ queues + activate the breaker/single-flight/rate-limit wrappers + cancel-flag fix). ✅ **P8f-1** (GHunt + Telegram credential login) and ✅ **P9a** (sidecar semaphores + `mem_limit`/`cpus` 16/8 GB profiles) are **done and merged to `main`** (2026-07-02).
 - **Full working artifacts** from the planning session (free-libs research matrices, the raw plan-v3, the fix-lists) live in the session scratchpad — ask if you want them copied into `docs/research/`.
 
 ---
@@ -27,7 +27,7 @@
 | API + SSE streaming | 🟢 ~85% | `POST /api/lookups`, SSE `GET /:id/stream` (Redis Streams, Last-Event-ID, heartbeat), `DELETE /:id`, `GET /providers`, health, metrics. |
 | Cache | 🟢 real | `withCache` (Redis) + `withTracing` active. |
 | Guardrails (P9) | 🔴 ~5% | `withRateLimit` / `withBreaker` / `withSingleFlight` = **noop stubs**; `@nestjs/throttler` **not wired**; no cost-guard. |
-| Concurrency | 🟠 risk | One generic queue `q.lookup`, worker concurrency **1**; **sidecar has NO concurrency cap** (the #1 OOM risk). |
+| Concurrency | 🟡 partial | **P9a done:** sidecar per-provider + global-heavy `asyncio.Semaphore` (default-deny) + per-container `mem_limit`/`cpus` (16/8 GB profiles). Still one generic BullMQ queue `q.lookup`, worker concurrency **1** (per-provider queues = P9b-core). |
 | Frontend | 🔴 ~15% | `apps/web` is a dev console (raw JSON). **Out of scope for now** (owner). |
 | Auth / Payments | ⚫ 0% | Zero code. `users` / `payments` / `paid_at` schema exists unused. |
 | Deploy (P11) | ⚫ deferred | Until explicit owner go-ahead (hard rule). |
@@ -110,8 +110,8 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 
 | # | Label | Phase | Size | Depends on | Req |
 |---|---|---|---|---|---|
-| 1 | **P8f-1** | GHunt master-token fix (spike-gated) | S | — | #5 |
-| 2 | **P9a** | Sidecar per-provider semaphore (default-deny) + mem_limits/cpus (both profiles) | S | — | #2, D1 |
+| ✅ | **P8f-1** | GHunt + Telegram credential login (mint inside sidecar) — *done, merged* | S | — | #5 |
+| ✅ | **P9a** | Sidecar per-provider semaphore (default-deny) + mem_limits/cpus (both profiles) — *done, merged* | S | — | #2, D1 |
 | 3 | **P9b-core** | Per-provider BullMQ queues + wrappers (breaker **DB-persist** / single-flight / rate-limit) + cost counter + cancel-flag fix | M | P9a | #2 |
 | 4 | **P13** | Ops cockpit: Bull-Board (own auth) + `/admin` JSON + D2 config toggles + queue/RSS | S–M | P9b-core | #2, D2, D3 |
 | 5 | **P8f-2** | Providers (lean): **user-scanner + Hudson Rock** | S | P9a, P9b-core | #4 |
@@ -268,7 +268,8 @@ Plus: per-provider conformance (existing `conformance.ts`), breaker DB-persist+r
 
 Pick one (first two phases are independent):
 
-- **`P9a` — recommended first.** Safety floor (sidecar semaphores + mem_limits). Small, trivially safe, unblocks everything, and stops you OOM-ing your own dev box while testing. Then P9b-core → P13.
-- **`P8f-1` — GHunt.** You're already on this branch; finish it (master-token spike).
+- ✅ **`P8f-1` — GHunt/Telegram login** — done, merged 2026-07-02 (interactive burner login stays a manual owner step).
+- ✅ **`P9a` — safety floor** — done, merged 2026-07-02 (sidecar semaphores + `mem_limit`/`cpus` profiles; live fan-out RSS load-test still a manual/CI step).
+- **`P9b-core` — next.** Per-provider BullMQ queues + activate the breaker (DB-persist) / single-flight / rate-limit wrappers + cost counter + cancel-while-queued fix. Then P13 (ops cockpit).
 
 Each phase = a new branch `phase/<id>-<slug>` + a draft PR, `pnpm check` green at the end, owner merges. Say which one and I'll open the branch and start.
