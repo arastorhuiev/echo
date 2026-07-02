@@ -9,7 +9,10 @@
 *.key
 *.crt
 *.p12
-secrets/
+# Keep the secrets/ dir present (and documented) on clone, but never track
+# the credential files dropped into it (Telegram session, GHunt creds.m, …).
+secrets/*
+!secrets/README.md
 **/credentials.json
 **/service-account*.json
 

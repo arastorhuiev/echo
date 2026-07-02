@@ -23,9 +23,9 @@ assert {
 }
 
 docs {
-  Env-conditional direct hit. Without GHUNT_CREDS_PATH set + the
-  creds.m file actually present at that path, returns
-  `configured: false`. With both, spawns `ghunt email <addr> --json
-  <tmpfile>` as a subprocess and normalises the verbose JSON dump into
-  a slim profile.
+  Env-conditional direct hit. Without the creds.m file present at
+  /secrets/.malfrats/ghunt/creds.m (minted once via `ghunt login`),
+  returns `configured: false`. With it, spawns `ghunt email <addr>
+  --json <tmpfile>` as a subprocess and normalises the verbose JSON
+  dump into a slim profile.
 }

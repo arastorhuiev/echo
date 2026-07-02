@@ -112,6 +112,15 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       HTTP_PROXY: ${HTTP_PROXY:-}
       NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
+    volumes:
+      # File-based provider credentials (Telegram session, GHunt creds.m, …)
+      # live in the git-ignored ./secrets dir. ONE mount covers every
+      # file-based credential — point the matching *_PATH env at /secrets/…
+      # in .env.providers. Read-write because Telethon updates its session
+      # SQLite on every connect. The session itself is minted once via
+      #   docker compose run --rm osint-py python -m app.telegram_login
+      # and is portable: copy ./secrets to another host to redeploy.
+      - ./secrets:/secrets
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

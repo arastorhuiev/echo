@@ -95,15 +95,19 @@ A subset of providers register but stay dormant until env vars are present. With
 
 1. **Get the API key** — free at <https://my.telegram.org/apps>. Returns `api_id` (integer) and `api_hash` (hex).
 2. **Provision a disposable SIM** — buy a one-shot phone number from a reseller (e.g. 5sim.net or sms-activate.org, ~$0.30 in 2026). Register a fresh Telegram account on that number through any official client.
-3. **Capture a session file** — one-time, interactive. Run `python -c "from telethon.sync import TelegramClient; TelegramClient('/tmp/session', <api_id>, '<api_hash>').start()"` on a workstation, enter the SMS code Telegram sends to your disposable SIM. The resulting `/tmp/session.session` file IS the credential.
-4. **Move the session file to the server** (chmod 600). The path becomes `TELEGRAM_SESSION_PATH`.
-5. **Set env vars** in `.env.providers`:
+3. **Set the two API vars** in `.env.providers` (`TELEGRAM_SESSION_PATH` is already pre-set to `/secrets/telegram.session`):
    ```env
    TELEGRAM_API_ID=12345
    TELEGRAM_API_HASH=abc123def456...
-   TELEGRAM_SESSION_PATH=/data/telegram-session.session
+   TELEGRAM_SESSION_PATH=/secrets/telegram.session
    ```
-6. **Verify** — `docker compose restart osint-py`, then trigger a lookup. The Final's `configured` flag should be `true`.
+4. **Mint the session file** — one-time, interactive, but runs *inside the sidecar* (Telethon is already installed there), so there's nothing to install on the host:
+   ```bash
+   docker compose run --rm osint-py python -m app.telegram_login
+   ```
+   Enter the disposable phone number and the login code Telegram sends it (+ 2FA password if set). The session is written to `./secrets/telegram.session` on the host (git-ignored) and is mounted into the sidecar at `/secrets/telegram.session`. The file IS the credential — keep it private.
+5. **Deploy elsewhere without re-login** — the session file is portable. Copy `./secrets` to the target host (`chmod 600` the session; on Linux `chown 1001:1001` so the sidecar user can read/write it) and `docker compose up -d`. No interactive step on the server.
+6. **Verify** — `docker compose up -d` (or `restart osint-py`), then trigger a lookup. The Final's `configured` flag should be `true`.
 
 Rate-limits: ~100–200 resolves/day per session before `FLOOD_WAIT`. When that becomes a bottleneck, provision more sessions and pool them (separate work item, not P8a).
 
@@ -123,6 +127,23 @@ Rate-limits: ~100–200 resolves/day per session before `FLOOD_WAIT`. When that 
 4. **Smoke-test** — trigger one lookup against a known number; if the route returns `error: "truecallerpy error: HTTP 401"` the `installationId` has been invalidated (Truecaller occasionally bans). Re-run the login flow with a fresh SIM.
 
 Rate-limits: empirically ~100–200 lookups/day per `installationId` before bans. Cache aggressively (`cacheTtlSec` is already 6 hours).
+
+#### GHunt (`ghunt`)
+
+1. **No API key to register** — GHunt authenticates as a Google account directly. Use a **disposable** Google account, signed in on a real browser.
+2. **Mint the creds file** — one-time, interactive, but runs *inside the sidecar* (GHunt is already installed there), so there's nothing to install on the host:
+   ```bash
+   docker compose run --rm -e HOME=/secrets osint-py ghunt login
+   ```
+   GHunt's own login menu offers 4 methods. **Skip option [1]** ("Companion, listening mode") — it opens a local port for the browser extension to post to, which doesn't work through Docker. Pick **[2]** (install the [GHunt Companion](https://github.com/mxrch/ghunt_companion) extension, sign in as the disposable account, paste the base64 blob it gives you) or **[3]/[4]** (manually copy the `oauth_token` / `master_token` out of the browser's network tab — more fiddly, no extension needed).
+3. **No env var to set** — GHunt hardcodes its creds path relative to `$HOME` with no override (verified against the pinned `ghunt==2.3.3` wheel: neither `login` nor `email` accepts a custom path). The runner points `HOME=/secrets` at every invocation instead, so the file lands at `./secrets/.malfrats/ghunt/creds.m` on the host and the provider auto-detects it by presence.
+4. **Deploy elsewhere without re-login** — same as Telegram: copy `./secrets` to the target host (`chown 1001:1001` on Linux) and `docker compose up -d`.
+5. **Verify** — trigger a lookup. The Final's `configured` flag should be `true`.
+
+If a lookup starts returning `ghunt exited 1` with a 401 in the error text, the Google cookies went stale — clear and redo the login:
+```bash
+docker compose run --rm -e HOME=/secrets osint-py ghunt login --clean
+```
 
 ### Backup / restore
 *To be populated in P11.* `pg_dump` → B2 / Hetzner Object Storage; restore is `pg_restore` into a fresh DB.

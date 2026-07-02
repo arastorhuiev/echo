@@ -80,7 +80,8 @@ describe("ghuntProvider — env-conditional path", () => {
           configured: false,
           found: false,
           emails: [],
-          error: "GHunt not configured. Set GHUNT_CREDS_PATH...",
+          error:
+            "GHunt not configured. Run `docker compose run --rm -e HOME=/secrets osint-py ghunt login` once...",
         },
       }),
     })
