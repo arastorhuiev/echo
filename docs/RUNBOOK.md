@@ -48,6 +48,51 @@ curl -N http://localhost:3000/api/lookups/$LOOKUP_ID/stream
 - **Deploy:** GitHub Actions `deploy.yml` (merge to `main` → manual approve → SSH → `docker compose pull && up -d`).
 - **Rollback:** redeploy the previous image tag — `docker compose -f docker-compose.prod.yml pull <previous-sha>` then `up -d --force-recreate`.
 
+## Memory profiles (16↔8 GB switch)
+
+Every container has a `mem_limit` + `cpus` cap driven by env vars, and the
+sidecar's heavy-provider concurrency (Sherlock / Maigret / … subprocesses,
+mailcat's Chromium) is bounded by two composed semaphores
+(`services/echo-osint-py/app/concurrency.py`). Both are sized by one of two
+profile files — swapping profiles is a **file swap, no code change**:
+
+| Knob | `cx42-16g.env` (default) | `cx32-8g.env` (fallback) |
+|---|---|---|
+| Box | Hetzner CX42 (16 GB / 8 vCPU) | Hetzner CX32 (8 GB / 4 vCPU) |
+| `OSINT_PY_MEM_LIMIT` | 6144m | 3072m |
+| Σ container mem | ≈10.0 GB (~6 GB headroom) | ≈5.75 GB (~2.25 GB headroom) |
+| `GLOBAL_HEAVY_CONCURRENCY` | 3 | 1 |
+| `MAIGRET_MAX_CONCURRENCY` | 2 | 1 |
+| `MAILCAT_ENABLED` | true | false (Chromium too heavy) |
+
+The 16 GB numbers are also the inline `${VAR:-default}` fallbacks in
+`docker-compose.yml`, so a bare `docker compose up -d` already runs the
+default profile.
+
+**Downsize to 8 GB (one command):**
+
+```bash
+docker compose --env-file deploy/profiles/cx32-8g.env up -d
+```
+
+**Back to 16 GB:**
+
+```bash
+docker compose --env-file deploy/profiles/cx42-16g.env up -d
+# (or just `docker compose up -d` — 16 GB is the built-in default)
+```
+
+**Verify a profile before applying** (renders the effective limits without
+touching the running stack):
+
+```bash
+docker compose --env-file deploy/profiles/cx32-8g.env config | grep -E 'mem_limit|cpus|MEM_LIMIT'
+```
+
+Unlisted providers default-DENY to a concurrency of 1 (never unbounded), so a
+new heavy provider can't silently blow the memory budget before it's given an
+explicit cap.
+
 ## Monitoring & alerts
 
 *To be populated in P10.* Skeleton:
