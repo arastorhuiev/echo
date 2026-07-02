@@ -7,6 +7,8 @@ export {
 } from "@/core/wrappers/with-breaker.js"
 export { withCache } from "@/core/wrappers/with-cache.js"
 export { type RateLimitOptions, withRateLimit } from "@/core/wrappers/with-rate-limit.js"
+export {
+  type SingleFlightOptions,
+  withSingleFlight,
+} from "@/core/wrappers/with-single-flight.js"
 export { withTracing } from "@/core/wrappers/with-tracing.js"
-// withSingleFlight stays a no-op stub until P9b-core stage 2 (its Redis
-// pub/sub fan-out needs a running-stack integration test to land safely).

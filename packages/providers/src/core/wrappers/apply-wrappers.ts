@@ -3,6 +3,7 @@ import type { OsintProvider } from "@/core/provider.js"
 import { type BreakerPersist, withBreaker } from "@/core/wrappers/with-breaker.js"
 import { withCache } from "@/core/wrappers/with-cache.js"
 import { withRateLimit } from "@/core/wrappers/with-rate-limit.js"
+import { withSingleFlight } from "@/core/wrappers/with-single-flight.js"
 import { withTracing } from "@/core/wrappers/with-tracing.js"
 
 export interface WrapperDeps {
@@ -21,15 +22,15 @@ export interface WrapperDeps {
  * Compose every cross-cutting wrapper around a provider. Order (outermost
  * first) is deliberate:
  *
- *   tracing → cache → breaker → rate-limit → provider
+ *   tracing → cache → single-flight → breaker → rate-limit → provider
  *
  * - tracing outermost: its span covers cache hits + breaker short-circuits.
- * - cache next: a hit returns before touching breaker/rate-limit/upstream.
+ * - cache next: a hit returns before touching anything below.
+ * - single-flight: collapses concurrent identical queries to one call that
+ *   goes through breaker + rate-limit + upstream.
  * - breaker before rate-limit: an open breaker short-circuits without
  *   burning a rate-limit token.
  * - rate-limit innermost: gates only the real upstream call.
- *
- * (`withSingleFlight` slots between cache and breaker when it lands.)
  *
  * The composer is THE place to add or reorder wrappers — providers never
  * call them directly.
@@ -43,5 +44,6 @@ export function applyWrappers<Q, R>(
     redis: deps.redis,
     persist: deps.persistBreaker,
   })
-  return withTracing(withCache(breakered, deps.redis))
+  const singleFlighted = withSingleFlight(breakered, deps.redis)
+  return withTracing(withCache(singleFlighted, deps.redis))
 }
