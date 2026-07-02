@@ -9,6 +9,7 @@ import { Inject, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import type { Job } from "bullmq"
 import { Redis } from "ioredis"
+import { trackProviderCost, wasCancelledWhileQueued } from "@/lookups/guards"
 
 /** Stream TTL after the lookup terminates — keeps SSE replay window alive for late reconnects. */
 const STREAM_TTL_SEC = 60 * 60
@@ -53,6 +54,20 @@ export class LookupProcessor extends WorkerHost {
       throw new Error(`Unknown providerId in job ${job.id}: ${providerId}`)
     }
 
+    // Cancel-while-queued: if the api cancelled this lookup while its job
+    // sat in the queue, abort before touching the provider. The pub/sub
+    // cancel channel only wakes an already-running job, so a persisted flag
+    // is the only thing that stops a still-`waiting` job from running.
+    if (await wasCancelledWhileQueued(this.redis, lookupId)) {
+      await this.persistAndFanout(lookupId, 1, { _tag: "Cancelled" }, streamKey)
+      await repositories.lookups.markCancelled(this.dbClient.db, lookupId)
+      await this.redis.expire(streamKey, STREAM_TTL_SEC).catch(() => {})
+      this.logger.log(
+        `Lookup ${lookupId} cancelled before running (was queued, provider=${providerId})`,
+      )
+      return { cancelled: true }
+    }
+
     // BullMQ retry: prior attempt's lookup_events would clash with the
     // new attempt's (lookup_id, seq) under the unique index. Idempotent
     // on the first attempt — no rows yet.
@@ -71,6 +86,15 @@ export class LookupProcessor extends WorkerHost {
     const subscription = await this.setupCancelSubscriber(lookupId, controller)
 
     await repositories.lookups.markRunning(this.dbClient.db, lookupId)
+
+    // Cost counter (count-only; enforcement is P9-pub). One INCR per run.
+    const costWarn = this.config.get("COST_DAILY_WARN")
+    const cost = await trackProviderCost({ redis: this.redis, warnThreshold: costWarn }, providerId)
+    if (cost.crossedWarn) {
+      this.logger.warn(
+        `Provider ${providerId} crossed COST_DAILY_WARN=${costWarn} today (${cost.count} runs)`,
+      )
+    }
 
     let seq = 0
     let result: unknown

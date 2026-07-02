@@ -29,6 +29,11 @@ export const envSchema = z.object({
   // Metrics endpoint allowlist (CSV of CIDR/IPs) — empty = open in dev,
   // production should set this to limit /api/metrics access.
   METRICS_ALLOWLIST: z.string().optional(),
+
+  // Per-provider daily run-count soft warning (P9b-core cost counter).
+  // The worker logs once when a provider crosses this many runs in a UTC
+  // day; 0 disables the warning. Hard enforcement is deferred to P9-pub.
+  COST_DAILY_WARN: z.coerce.number().int().nonnegative().default(500),
 })
 
 export type EnvSchema = z.infer<typeof envSchema>
