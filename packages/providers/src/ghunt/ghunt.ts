@@ -37,11 +37,11 @@ export interface GhuntProviderDeps {
  * counts as "mere aggregation"; AGPL §13 only triggers if we modify the
  * upstream code, which we don't.
  *
- * Env-conditional. The sidecar returns `configured=false` until
- * `GHUNT_CREDS_PATH` is set + the file exists (the one-time
- * `ghunt login` ritual, see RUNBOOK). Both "not configured" and real
- * GHunt failures land in `error` with the appropriate `configured` flag
- * — we never throw, the rest of the lookup pipeline keeps running.
+ * Env-conditional. The sidecar returns `configured=false` until the
+ * one-time `ghunt login` ritual has minted a creds file (see RUNBOOK) —
+ * no env var, just file presence. Both "not configured" and real GHunt
+ * failures land in `error` with the appropriate `configured` flag — we
+ * never throw, the rest of the lookup pipeline keeps running.
  */
 export function createGhuntProvider(
   deps: GhuntProviderDeps,

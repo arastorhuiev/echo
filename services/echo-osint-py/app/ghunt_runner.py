@@ -5,10 +5,16 @@ our app code. AGPL §13 only triggers on *modified* sourcing-over-the-
 network, which we don't do; an unmodified `ghunt` invoked as a child
 process counts as "mere aggregation".
 
-Env-conditional: needs both `GHUNT_CREDS_PATH` set AND the file
-actually present. Without that the route returns a clean
-`configured=false` instead of trying to spawn (which would either spin
-on stdin asking for creds, or crash with a config-missing error).
+GHunt hardcodes its creds file at `~/.malfrats/ghunt/creds.m` (verified
+against the pinned `ghunt==2.3.3` wheel: both `login.py` and `email.py`
+construct `GHuntCreds()` with no path argument) — there is no CLI flag
+or env var to point it elsewhere. Rather than patch upstream, every
+`ghunt` invocation gets `HOME` redirected to the mounted /secrets
+volume, so the file lands — and is found — at GHUNT_CREDS_FILE below.
+
+Env-conditional: without that file present, the route returns a clean
+`configured=false` instead of trying to spawn (which would either drop
+into GHunt's interactive login dialog on stdin, or crash).
 """
 
 from __future__ import annotations
@@ -27,6 +33,8 @@ logger = logging.getLogger("echo.ghunt")
 DEFAULT_TIMEOUT_S = 60.0
 TERM_GRACE_S = 3.0
 GHUNT_BIN = "ghunt"
+GHUNT_HOME = "/secrets"
+GHUNT_CREDS_FILE = Path(GHUNT_HOME) / ".malfrats/ghunt/creds.m"
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,17 +52,12 @@ class GhuntResult:
     error: str | None = None
 
 
-def _creds_present() -> str | None:
-    """Return the resolved creds path if both the env var is set and the
-    file exists; None otherwise. Used by the route to short-circuit
-    when GHunt isn't operationally provisioned."""
+def _creds_present() -> bool:
+    """True once the one-time `ghunt login` (docs/OWNER_TODO.md §2c) has
+    minted its creds file at GHUNT_CREDS_FILE. Used by the route to
+    short-circuit when GHunt isn't operationally provisioned."""
 
-    path = os.environ.get("GHUNT_CREDS_PATH")
-    if not path:
-        return None
-    if not Path(path).is_file():
-        return None
-    return path
+    return GHUNT_CREDS_FILE.is_file()
 
 
 async def run_ghunt_email(
@@ -67,14 +70,13 @@ async def run_ghunt_email(
     bubbling up — the consumer surfaces them as a Final.
     """
 
-    creds = _creds_present()
-    if creds is None:
+    if not _creds_present():
         return GhuntResult(
             configured=False,
             found=False,
             error=(
-                "GHunt not configured. Set GHUNT_CREDS_PATH to a creds.m "
-                "file produced by `ghunt login` (see RUNBOOK 'Provider credentials')."
+                "GHunt not configured. Run `docker compose run --rm -e HOME=/secrets "
+                "osint-py ghunt login` once (see docs/OWNER_TODO.md §2c)."
             ),
         )
 
@@ -84,11 +86,10 @@ async def run_ghunt_email(
 
     cmd = [GHUNT_BIN, "email", email, "--json", str(out_path)]
 
-    # GHunt looks for its creds in ~/.config/ghunt/. Point HOME at the
-    # parent of the creds.m file so a custom path Just Works without
-    # patching upstream.
+    # GHunt hardcodes ~/.malfrats/ghunt/creds.m with no override — point
+    # HOME at the mounted /secrets volume so it finds GHUNT_CREDS_FILE.
     env: dict[str, str] = dict(os.environ)
-    env["HOME"] = str(Path(creds).parent.parent)  # creds.m → ghunt/ → parent dir
+    env["HOME"] = GHUNT_HOME
 
     logger.info("ghunt start email=%s", email)
     proc = await asyncio.create_subprocess_exec(

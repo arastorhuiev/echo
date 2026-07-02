@@ -54,39 +54,53 @@ ones you care about; the rest just stay dormant with no side-effects.
 
 ### 2b. Telegram resolve (`phone → Telegram profile`)
 
-- Register a Telegram app at <https://my.telegram.org> (free, ~30s).
+- Register a Telegram app at <https://my.telegram.org> (free, ~30s):
+  **API development tools** → App title `echo backend`, Short name
+  `echoapp` (≥5 chars), Platform **Desktop**, URL/Description blank.
   You get `api_id` (integer) and `api_hash` (hex string).
-- One-time interactive Telethon login on your workstation:
-  ```
-  pip install telethon
-  python -c "from telethon.sync import TelegramClient; \
-      c = TelegramClient('echo.session', API_ID, 'API_HASH'); c.start(); c.disconnect()"
-  ```
-- Copy `echo.session` somewhere safe (e.g. `~/.echo/echo.session`).
-- Add to `.env`:
+- Put the two values in `.env.providers`:
   ```
   TELEGRAM_API_ID=...
   TELEGRAM_API_HASH=...
-  TELEGRAM_SESSION_PATH=/path/to/echo.session
+  # TELEGRAM_SESSION_PATH is already set to /secrets/telegram.session
   ```
-  Mount the session into the container if running via Docker (see
-  `docker-compose.yml`).
+- Mint the session file once — interactive, but runs inside the sidecar
+  (which already has Telethon), so nothing to `pip install`:
+  ```
+  docker compose run --rm osint-py python -m app.telegram_login
+  ```
+  Enter your phone number, then the login code Telegram sends you (+ 2FA
+  password if you have one). The session lands at `./secrets/telegram.session`
+  on the host — git-ignored, and mounted into the container automatically.
+- The session file is **portable**: to deploy elsewhere, copy `./secrets`
+  to the other host — you do *not* repeat this login there.
 
 ### 2c. GHunt (`email → Google profile / Maps reviews`)
 
-- One-time interactive login on your workstation:
+- Mint the creds file once — interactive, but runs inside the sidecar
+  (which already has GHunt installed), so nothing to `pip install`:
   ```
-  pip install ghunt
-  ghunt login
+  docker compose run --rm -e HOME=/secrets osint-py ghunt login
   ```
-  Follow the in-browser prompts. Use a **disposable** Google account.
-  GHunt writes a `creds.m` file in `~/.config/ghunt/`.
-- Add to `.env`:
-  ```
-  GHUNT_CREDS_PATH=/path/to/creds.m
-  ```
-  Mount the file into the container as a read-only volume if running via
-  Docker.
+  Use a **disposable** Google account, signed in on a real browser.
+  GHunt's login menu offers 4 methods — **skip option [1]** ("Companion,
+  listening mode"): it opens a local port for the browser extension to
+  post to, which doesn't work through Docker. Pick **[2]** (install the
+  [GHunt Companion](https://github.com/mxrch/ghunt_companion) browser
+  extension, sign in as the disposable account, then paste the
+  base64-encoded blob it gives you) or **[3]/[4]** (manually copy the
+  `oauth_token` / `master_token` out of the browser's network tab —
+  more fiddly, no extension needed).
+- The creds land at `./secrets/.malfrats/ghunt/creds.m` on the host —
+  git-ignored, mounted into the container automatically. Nothing to add
+  to `.env.providers`; the provider auto-detects the file (GHunt
+  hardcodes this path relative to `$HOME` with no override, so the
+  runner points `HOME` at `/secrets` for every invocation).
+- **Portable** like the Telegram session: to deploy elsewhere, copy
+  `./secrets` to the other host — you do *not* repeat this login there.
+- Stale cookies → `ghunt exited 1` with a 401 in the error text. Fix:
+  `docker compose run --rm -e HOME=/secrets osint-py ghunt login --clean`
+  (clears the old file so the login menu runs fresh), then log in again.
 
 ### 2d. mailcat (`username → likely email addresses`)
 

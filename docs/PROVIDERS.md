@@ -288,8 +288,10 @@ in `bruno/echo-api/environments/local.bru`:
 
 ### ghunt † env-conditional
 
-- **Status:** implemented (P8c). Activates only with `GHUNT_CREDS_PATH`
-  set to an existing `creds.m` file.
+- **Status:** implemented (P8c). Activates once `./secrets/.malfrats/ghunt/creds.m`
+  exists — no env var. GHunt hardcodes that path relative to `$HOME`
+  with no override, so the runner points `HOME=/secrets` at every
+  invocation instead of patching upstream.
 - **What it does:** Email → Google profile (real name, gaia_id,
   profile picture, Maps reviews count, calendar visibility). Often the
   highest-value email→identity bridge.
@@ -305,8 +307,10 @@ in `bruno/echo-api/environments/local.bru`:
 - **Files:** `packages/providers/src/ghunt/` + `services/echo-osint-py/app/ghunt_runner.py`
 - **Bruno:** `lookups/create-ghunt.bru` + `sidecar/ghunt-run.bru`
 - **Caveats:** stale Google cookies → 401 in stderr; re-run `ghunt
-  login`. Runner pins httpx to 0.27.2 because ghunt 2.3.3 requires
-  `httpx<0.28`.
+  login` (`--clean` first to force the login menu). GHunt's "Companion,
+  listening mode" login option doesn't work through Docker — use the
+  base64-paste or manual-token options instead (see OWNER_TODO.md).
+  Runner pins httpx to 0.27.2 because ghunt 2.3.3 requires `httpx<0.28`.
 - **Setup:** see `docs/OWNER_TODO.md`.
 
 ---

@@ -30,9 +30,10 @@ vars:post-response {
 }
 
 docs {
-  Env-conditional on GHUNT_CREDS_PATH (and the file actually existing).
+  Env-conditional on the one-time `ghunt login` having been run (no env
+  var — just the creds file at /secrets/.malfrats/ghunt/creds.m).
   Without it, the Final carries `configured: false` + an OWNER_TODO.md
-  pointer. With it set, returns the Google Maps reviews / profile
+  pointer. With it present, returns the Google Maps reviews / profile
   picture / real name (where the target has a Google account).
 
   If the Final shows `configured: true` + a "ghunt exited 1" error

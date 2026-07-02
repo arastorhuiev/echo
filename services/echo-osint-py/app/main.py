@@ -561,9 +561,10 @@ async def ghunt_run(
 ) -> GhuntEmailResponse:
     """Run `ghunt email <email>` and return the normalised JSON profile.
 
-    Env-conditional — when `GHUNT_CREDS_PATH` isn't set / the file is
-    missing, returns `configured=false` with an instructive error
-    rather than spawning a useless subprocess.
+    Env-conditional — when the one-time `ghunt login` hasn't been run
+    yet (no creds file at /secrets/.malfrats/ghunt/creds.m), returns
+    `configured=false` with an instructive error rather than spawning a
+    useless subprocess.
     """
 
     result = await run_ghunt_email(body.email, timeout_s=timeout_s)
