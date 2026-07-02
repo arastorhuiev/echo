@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -27,6 +28,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.concurrency import heavy_slot
 from app.exiftool_runner import DEFAULT_TIMEOUT_S as EXIFTOOL_DEFAULT_TIMEOUT_S
 from app.exiftool_runner import run_exiftool
 from app.ghunt_runner import DEFAULT_TIMEOUT_S as GHUNT_DEFAULT_TIMEOUT_S
@@ -55,6 +57,21 @@ from app.truecaller_runner import DEFAULT_TIMEOUT_S as TRUECALLER_DEFAULT_TIMEOU
 from app.truecaller_runner import run_truecaller
 
 logger = logging.getLogger("echo.main")
+
+
+def _mailcat_enabled() -> bool:
+    """mailcat drives a ~600 MB headless Chromium, so it is gated by both
+    MAILCAT_INSTALL_PATH (installed?) and MAILCAT_ENABLED (affordable on
+    this memory profile?). MAILCAT_ENABLED is false on the 8 GB profile —
+    see deploy/profiles/cx32-8g.env."""
+
+    return os.environ.get("MAILCAT_ENABLED", "true").strip().lower() not in {
+        "false",
+        "0",
+        "no",
+        "off",
+    }
+
 
 # E.164 max length is 15 digits + leading `+`. Accept slightly wider so
 # users can paste numbers with spaces/dashes and let libphonenumber
@@ -360,12 +377,13 @@ async def sherlock_run(
 
     async def stream() -> AsyncIterator[bytes]:
         try:
-            async for event in run_sherlock(body.username, timeout_s=timeout_s):
-                yield _to_sse(event)
-                # Yield control so StreamingResponse can observe a client
-                # disconnect between events. Without this, a fast inner
-                # generator can starve cancellation for the full run.
-                await anyio.sleep(0)
+            async with heavy_slot("sherlock"):
+                async for event in run_sherlock(body.username, timeout_s=timeout_s):
+                    yield _to_sse(event)
+                    # Yield control so StreamingResponse can observe a client
+                    # disconnect between events. Without this, a fast inner
+                    # generator can starve cancellation for the full run.
+                    await anyio.sleep(0)
         except Exception as err:  # noqa: BLE001 — surface unexpected runner errors
             logger.exception("sherlock runner crashed")
             yield _to_sse(SherlockEvent(kind="error", message=str(err)))
@@ -392,9 +410,10 @@ async def maigret_run(
 
     async def stream() -> AsyncIterator[bytes]:
         try:
-            async for event in run_maigret(body.username, timeout_s=timeout_s):
-                yield _to_sse(event)
-                await anyio.sleep(0)
+            async with heavy_slot("maigret"):
+                async for event in run_maigret(body.username, timeout_s=timeout_s):
+                    yield _to_sse(event)
+                    await anyio.sleep(0)
         except Exception as err:  # noqa: BLE001 — surface unexpected runner errors
             logger.exception("maigret runner crashed")
             yield _to_sse(MaigretEvent(kind="error", message=str(err)))
@@ -414,9 +433,10 @@ async def socialscan_run(
 ) -> StreamingResponse:
     async def stream() -> AsyncIterator[bytes]:
         try:
-            async for event in run_socialscan(body.queries, timeout_s=timeout_s):
-                yield _socialscan_to_sse(event)
-                await anyio.sleep(0)
+            async with heavy_slot("socialscan"):
+                async for event in run_socialscan(body.queries, timeout_s=timeout_s):
+                    yield _socialscan_to_sse(event)
+                    await anyio.sleep(0)
         except Exception as err:  # noqa: BLE001
             logger.exception("socialscan runner crashed")
             yield _socialscan_to_sse(SocialscanEvent(kind="error", message=str(err)))
@@ -442,7 +462,8 @@ async def phoneinfoga_run(
     so the caller surfaces the failure as a Final, not an HTTP error.
     """
 
-    result = await run_phoneinfoga(body.phone, timeout_s=timeout_s)
+    async with heavy_slot("phoneinfoga"):
+        result = await run_phoneinfoga(body.phone, timeout_s=timeout_s)
     local = result.local_scanner
     return PhoneinfogaResponse(
         local_scanner=(
@@ -500,7 +521,8 @@ async def exiftool_run(
     bubbling 5xx.
     """
 
-    result = await run_exiftool(body.image_url, timeout_s=timeout_s)
+    async with heavy_slot("exiftool"):
+        result = await run_exiftool(body.image_url, timeout_s=timeout_s)
     return ExiftoolResponse(
         found=result.found,
         file_type=result.file_type,
@@ -534,14 +556,32 @@ async def mailcat_run(
     """Run mailcat on the given username and stream per-provider events.
 
     Env-conditional. Without MAILCAT_INSTALL_PATH the runner yields a
-    single `error` event the consumer surfaces as a Final.
+    single `error` event the consumer surfaces as a Final. Also gated by
+    MAILCAT_ENABLED (false on the 8 GB profile — Chromium is ~600 MB).
     """
+
+    if not _mailcat_enabled():
+
+        async def disabled() -> AsyncIterator[bytes]:
+            yield _mailcat_to_sse(
+                MailcatEvent(
+                    kind="error",
+                    message="mailcat is disabled on this memory profile (MAILCAT_ENABLED=false)",
+                )
+            )
+
+        return StreamingResponse(
+            disabled(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+        )
 
     async def stream() -> AsyncIterator[bytes]:
         try:
-            async for event in run_mailcat(body.username, timeout_s=timeout_s):
-                yield _mailcat_to_sse(event)
-                await anyio.sleep(0)
+            async with heavy_slot("mailcat"):
+                async for event in run_mailcat(body.username, timeout_s=timeout_s):
+                    yield _mailcat_to_sse(event)
+                    await anyio.sleep(0)
         except Exception as err:  # noqa: BLE001
             logger.exception("mailcat runner crashed")
             yield _mailcat_to_sse(MailcatEvent(kind="error", message=str(err)))
@@ -567,7 +607,8 @@ async def ghunt_run(
     useless subprocess.
     """
 
-    result = await run_ghunt_email(body.email, timeout_s=timeout_s)
+    async with heavy_slot("ghunt"):
+        result = await run_ghunt_email(body.email, timeout_s=timeout_s)
     return GhuntEmailResponse(
         configured=result.configured,
         found=result.found,
@@ -592,9 +633,10 @@ async def ignorant_run(
 
     async def stream() -> AsyncIterator[bytes]:
         try:
-            async for event in run_ignorant(body.phone, body.country_code, timeout_s=timeout_s):
-                yield _ignorant_to_sse(event)
-                await anyio.sleep(0)
+            async with heavy_slot("ignorant"):
+                async for event in run_ignorant(body.phone, body.country_code, timeout_s=timeout_s):
+                    yield _ignorant_to_sse(event)
+                    await anyio.sleep(0)
         except Exception as err:  # noqa: BLE001
             logger.exception("ignorant runner crashed")
             yield _ignorant_to_sse(IgnorantEvent(kind="error", message=str(err)))
@@ -620,7 +662,8 @@ async def socid_extractor_run(
     extracted fields.
     """
 
-    result = await run_socid_extractor(body.url, timeout_s=timeout_s)
+    async with heavy_slot("socid-extractor"):
+        result = await run_socid_extractor(body.url, timeout_s=timeout_s)
     return SocidExtractorResponse(
         found=result.found,
         url=result.url,
@@ -712,7 +755,8 @@ async def telegram_resolve_run(
     communicate "not provisioned" vs real Telethon failures.
     """
 
-    result = await run_telegram_resolve(body.phone, timeout_s=timeout_s)
+    async with heavy_slot("telegram-resolve"):
+        result = await run_telegram_resolve(body.phone, timeout_s=timeout_s)
     return TelegramResolveResponse(
         configured=result.configured,
         found_on_telegram=result.found_on_telegram,
@@ -739,7 +783,8 @@ async def truecaller_run(
 ) -> TruecallerResponse:
     """Truecaller phone→identity lookup. Env-conditional."""
 
-    result = await run_truecaller(body.phone, body.country_code, timeout_s=timeout_s)
+    async with heavy_slot("truecaller"):
+        result = await run_truecaller(body.phone, body.country_code, timeout_s=timeout_s)
     return TruecallerResponse(
         configured=result.configured,
         found=result.found,

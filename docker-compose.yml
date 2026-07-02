@@ -5,6 +5,8 @@ services:
     image: postgres:17-alpine
     container_name: echo-postgres
     restart: unless-stopped
+    mem_limit: ${POSTGRES_MEM_LIMIT:-1536m}
+    cpus: ${POSTGRES_CPUS:-2}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-echo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
@@ -24,6 +26,8 @@ services:
     image: redis:7-alpine
     container_name: echo-redis
     restart: unless-stopped
+    mem_limit: ${REDIS_MEM_LIMIT:-768m}
+    cpus: ${REDIS_CPUS:-1}
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
@@ -43,6 +47,8 @@ services:
         APP: api
     container_name: echo-api
     restart: unless-stopped
+    mem_limit: ${API_MEM_LIMIT:-768m}
+    cpus: ${API_CPUS:-2}
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -76,6 +82,8 @@ services:
         APP: worker
     container_name: echo-worker
     restart: unless-stopped
+    mem_limit: ${WORKER_MEM_LIMIT:-1024m}
+    cpus: ${WORKER_CPUS:-2}
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -97,6 +105,8 @@ services:
       dockerfile: Dockerfile
     container_name: echo-osint-py
     restart: unless-stopped
+    mem_limit: ${OSINT_PY_MEM_LIMIT:-6144m}
+    cpus: ${OSINT_PY_CPUS:-4}
     # OSINT provider credentials live in `.env.providers` (optional, git-ignored)
     # so the whole credential layer is one deletable unit. `required: false`
     # means an absent file is fine — env-conditional providers just report
@@ -112,6 +122,11 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       HTTP_PROXY: ${HTTP_PROXY:-}
       NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
+      # Heavy-provider concurrency caps (sidecar semaphores). Sized per
+      # memory profile — see deploy/profiles/*.env and app/concurrency.py.
+      GLOBAL_HEAVY_CONCURRENCY: ${GLOBAL_HEAVY_CONCURRENCY:-3}
+      MAIGRET_MAX_CONCURRENCY: ${MAIGRET_MAX_CONCURRENCY:-2}
+      MAILCAT_ENABLED: ${MAILCAT_ENABLED:-true}
     volumes:
       # File-based provider credentials (Telegram session, GHunt creds.m, …)
       # live in the git-ignored ./secrets dir. ONE mount covers every
