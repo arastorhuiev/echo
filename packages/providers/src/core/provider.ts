@@ -31,6 +31,12 @@ export interface ProviderDefaults {
   readonly maxConcurrent: number
   /** Successful-result cache TTL in seconds. 0 disables caching. */
   readonly cacheTtlSec: number
+  /**
+   * Outbound requests/second cap enforced by `withRateLimit` (fixed 1 s
+   * window). Omitted → the wrapper default (10/s). Scraper-style
+   * providers that bounce off bans should set this lower.
+   */
+  readonly ratePerSec?: number
   /** Circuit-breaker policy (see `withBreaker`). */
   readonly breaker: {
     readonly failureThreshold: number
@@ -102,6 +108,7 @@ export type ProviderErrorKind =
   | "Banned"
   | "Network"
   | "Parse"
+  | "CircuitOpen"
   | "Unknown"
 
 /**

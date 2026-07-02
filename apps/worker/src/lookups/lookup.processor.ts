@@ -60,7 +60,13 @@ export class LookupProcessor extends WorkerHost {
       await repositories.lookupEvents.deleteByLookup(this.dbClient.db, lookupId)
     }
 
-    const wrapped = applyWrappers(provider, { redis: this.redis })
+    const wrapped = applyWrappers(provider, {
+      redis: this.redis,
+      // Mirror every breaker transition + outcome into `providers` so the
+      // ops cockpit (P13) reads live state and it survives a worker restart.
+      persistBreaker: (id, state, outcome) =>
+        repositories.providers.upsertHealth(this.dbClient.db, id, state, outcome),
+    })
     const controller = new AbortController()
     const subscription = await this.setupCancelSubscriber(lookupId, controller)
 

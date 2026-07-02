@@ -1,30 +1,47 @@
 import type { Redis } from "ioredis"
 import type { OsintProvider } from "@/core/provider.js"
+import { type BreakerPersist, withBreaker } from "@/core/wrappers/with-breaker.js"
 import { withCache } from "@/core/wrappers/with-cache.js"
+import { withRateLimit } from "@/core/wrappers/with-rate-limit.js"
 import { withTracing } from "@/core/wrappers/with-tracing.js"
 
 export interface WrapperDeps {
-  /** Shared ioredis client used by cache + single-flight. */
+  /** Shared ioredis client used by cache, breaker, and rate-limiter. */
   readonly redis: Redis
+  /**
+   * Optional breaker-state sink (P9b-core). The worker wires this to
+   * `repositories.providers.upsertHealth` so breaker transitions land in
+   * Postgres for the ops cockpit. Omitted → the breaker still runs
+   * entirely in Redis, just not mirrored to the DB.
+   */
+  readonly persistBreaker?: BreakerPersist
 }
 
 /**
- * Compose every cross-cutting wrapper around a provider. Order matters:
- * tracing wraps the outside so cache hits, future breaker short-circuits,
- * etc. all show up in the same span.
+ * Compose every cross-cutting wrapper around a provider. Order (outermost
+ * first) is deliberate:
  *
- * Currently active: cache + tracing. The single-flight, breaker, and
- * rate-limit wrappers will be added back in P9 (hardening) once their
- * real implementations land — the stub pass-through versions live in
- * `with-{single-flight,breaker,rate-limit}.ts` with their planned
- * design captured in module-level comments.
+ *   tracing → cache → breaker → rate-limit → provider
  *
- * The composer is THE place to add or reorder wrappers — providers
- * never call them directly.
+ * - tracing outermost: its span covers cache hits + breaker short-circuits.
+ * - cache next: a hit returns before touching breaker/rate-limit/upstream.
+ * - breaker before rate-limit: an open breaker short-circuits without
+ *   burning a rate-limit token.
+ * - rate-limit innermost: gates only the real upstream call.
+ *
+ * (`withSingleFlight` slots between cache and breaker when it lands.)
+ *
+ * The composer is THE place to add or reorder wrappers — providers never
+ * call them directly.
  */
 export function applyWrappers<Q, R>(
   provider: OsintProvider<Q, R>,
   deps: WrapperDeps,
 ): OsintProvider<Q, R> {
-  return withTracing(withCache(provider, deps.redis))
+  const rateLimited = withRateLimit(provider, deps.redis)
+  const breakered = withBreaker(rateLimited, {
+    redis: deps.redis,
+    persist: deps.persistBreaker,
+  })
+  return withTracing(withCache(breakered, deps.redis))
 }
