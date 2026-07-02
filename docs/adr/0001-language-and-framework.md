@@ -25,7 +25,7 @@
 
 **Bad:**
 - Lock-in to Nest abstractions (modules, providers, decorators).
-- Vitest needs an SWC adapter (`unplugin-swc`) to play nicely with Nest's reflect-metadata. Documented in [P0/P3 of the agent plan](../AGENT_PLAN.md).
+- Vitest needs an SWC adapter (`unplugin-swc`) to play nicely with Nest's reflect-metadata. (Set up during the P0/P3 workspace + Nest phases.)
 - Nest's Express-shaped reflexes occasionally bleed through even with the Fastify adapter; we'll prefer Fastify-native middleware where it matters (e.g., SSE streaming).
 
 ## Alternatives considered

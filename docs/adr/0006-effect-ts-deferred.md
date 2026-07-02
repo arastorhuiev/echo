@@ -32,7 +32,7 @@ The original PROMPT.md listed Effect-TS v4 as part of the preferred stack, and A
 
 ## Reconsideration — explicit checkpoint at M1 (not just trigger-based)
 
-Per owner direction, this ADR is reconsidered **at a specific scheduled checkpoint**, not only when triggers fire. The checkpoint is **M1** in [`AGENT_PLAN.md`](../AGENT_PLAN.md) — between P7 and P8, after the first real provider lives in the abstraction and before mass-adding more providers makes any change expensive.
+Per owner direction, this ADR is reconsidered **at a specific scheduled checkpoint**, not only when triggers fire. The checkpoint is **M1** (between P7 and P8), after the first real provider lives in the abstraction and before mass-adding more providers makes any change expensive.
 
 At M1 the agent stops, opens a `docs/adr/0006a-effect-ts-review-<DATE>.md` draft summarizing the actual repo shape, and the owner decides:
 

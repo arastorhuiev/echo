@@ -2,7 +2,7 @@
 #
 # This file is NOT used by the local docker-compose.yml. It's a reference
 # for P11 (deployment), which is currently DEFERRED — see
-# docs/AGENT_PLAN.md and docs/adr/0011-deployment-target.md.
+# docs/ROADMAP.md and docs/adr/0011-deployment-target.md.
 #
 # When P11 is activated:
 # - replace `api.echo.example` with the real domain

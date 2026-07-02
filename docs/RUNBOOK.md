@@ -1,6 +1,6 @@
 # Runbook
 
-> Operational quick reference. Sections are filled in as the corresponding phase of [`AGENT_PLAN.md`](./AGENT_PLAN.md) lands. Phases P0–P7 are implemented; later sections still carry placeholders.
+> Operational quick reference. Sections are filled in as the corresponding phase of [`ROADMAP.md`](./ROADMAP.md) lands. Phases P0–P8 are implemented; later sections still carry placeholders.
 
 ## Local development
 
@@ -120,7 +120,7 @@ Rate-limits: ~100–200 resolves/day per session before `FLOOD_WAIT`. When that 
    ```env
    TRUECALLER_INSTALLATION_ID=aXXX-XXXX-XXXX
    ```
-4. **Smoke-test** — see [p8-plan REV-3 § 4](./research/p8-plan.md). Trigger one lookup against a known number; if the route returns `error: "truecallerpy error: HTTP 401"` the `installationId` has been invalidated (Truecaller occasionally bans). Re-run the login flow with a fresh SIM.
+4. **Smoke-test** — trigger one lookup against a known number; if the route returns `error: "truecallerpy error: HTTP 401"` the `installationId` has been invalidated (Truecaller occasionally bans). Re-run the login flow with a fresh SIM.
 
 Rate-limits: empirically ~100–200 lookups/day per `installationId` before bans. Cache aggressively (`cacheTtlSec` is already 6 hours).
 
@@ -188,7 +188,7 @@ When you no longer need any scrape-based provider, the proxy infra can be delete
 - Delete `infra/proxy-gw/` directory.
 - Delete the proxy section in `.env.example`.
 - Delete this RUNBOOK section.
-- Mark P7a as `superseded` in `docs/AGENT_PLAN.md` (don't delete the entry — historical record).
+- Note the P7a / proxy removal in `docs/ROADMAP.md` (historical record).
 
 If you find yourself needing to touch any Python / TypeScript / NestJS code during removal, the architectural contract was violated somewhere earlier — fix that first.
 

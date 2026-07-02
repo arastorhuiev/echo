@@ -5,7 +5,7 @@
 
 ## Context
 
-M1 is the explicit checkpoint scheduled in [`AGENT_PLAN.md`](../AGENT_PLAN.md) between P7 and P8 to reconsider [ADR-0006 (Effect-TS deferred)](./0006-effect-ts-deferred.md) with the actual repo in front of the owner — before mass-adding providers in P8 makes any abstraction change expensive.
+M1 is the explicit checkpoint scheduled between P7 and P8 to reconsider [ADR-0006 (Effect-TS deferred)](./0006-effect-ts-deferred.md) with the actual repo in front of the owner — before mass-adding providers in P8 makes any abstraction change expensive.
 
 This ADR records the state of the codebase at M1 and the decision.
 
