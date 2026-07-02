@@ -14,7 +14,7 @@
 - **What echo is:** a cheap freemium **person-lookup** OSINT aggregator (email / phone / username → an aggregated report about a person), modeled on but undercutting osint.industries / claritycheck. **Not** domain/company recon.
 - **Where we are:** the *engine* is done (P0–P8: 14 providers, SSE streaming, real Redis cache). The *product layers* are not: no guardrails (rate-limit/breaker/single-flight are noop stubs, sidecar has **zero** concurrency caps → a Maigret loop OOMs the box), no aggregation/"search" layer (today 1 lookup = 1 provider), no auth, no payments.
 - **What's locked (owner decisions):** payments **last** (a stub keeps results always testable); a **light ops/admin** surface (Bull-Board + `/admin` JSON, no consumer web); providers **free-only** (no paid APIs) pruned to **user-scanner + Hudson Rock**; hosting **CX42 16 GB** with one-command fallback to **CX32 8 GB**; positioning **person-lookup**.
-- **First action to pick tomorrow:** **P9b-core stage 2** (per-provider BullMQ queues + `withSingleFlight` + cost counter + cancel-while-queued fix). ✅ **P8f-1** (GHunt + Telegram credential login), ✅ **P9a** (sidecar semaphores + `mem_limit`/`cpus` 16/8 GB profiles), and ✅ **P9b-core stage 1** (`withBreaker` DB-persist + `withRateLimit` wrappers) are **done and merged to `main`** (2026-07-02).
+- **First action to pick tomorrow:** **P9b-core stage 2b** (per-provider BullMQ queues + cost counter + cancel-while-queued fix — these touch the api/worker BullMQ wiring and want a worker/queue Testcontainers harness). ✅ **P8f-1** (GHunt + Telegram credential login), ✅ **P9a** (sidecar semaphores + `mem_limit`/`cpus` 16/8 GB profiles), and ✅ **P9b-core wrappers** (`withBreaker` DB-persist + `withRateLimit` + `withSingleFlight`, all unit-tested) are **done and merged to `main`** (2026-07-02).
 - **Full working artifacts** from the planning session (free-libs research matrices, the raw plan-v3, the fix-lists) live in the session scratchpad — ask if you want them copied into `docs/research/`.
 
 ---
@@ -26,7 +26,7 @@
 | Providers (engine) | 🟢 ~90% | 14 providers: username(6) / phone(5) / email(1=ghunt) / breach(1=hibp) / image(1=exiftool) / meta. Conformance-tested. |
 | API + SSE streaming | 🟢 ~85% | `POST /api/lookups`, SSE `GET /:id/stream` (Redis Streams, Last-Event-ID, heartbeat), `DELETE /:id`, `GET /providers`, health, metrics. |
 | Cache | 🟢 real | `withCache` (Redis) + `withTracing` active. |
-| Guardrails (P9) | 🟡 partial | **P9b-core s1 done:** `withBreaker` (Redis state machine + DB-persist) + `withRateLimit` (per-provider) are live in `apply-wrappers`. Still stubbed: `withSingleFlight`; `@nestjs/throttler` not wired; cost-guard / per-provider queues / cancel-while-queued = P9b-core s2 + P9-pub. |
+| Guardrails (P9) | 🟡 partial | **All 3 wrappers live** in `apply-wrappers`: `withBreaker` (Redis SM + DB-persist), `withRateLimit` (per-provider), `withSingleFlight` (dedup via Redis lock + pub/sub). Still open: `@nestjs/throttler` not wired; cost-guard / per-provider BullMQ queues / cancel-while-queued = P9b-core s2b + P9-pub. |
 | Concurrency | 🟡 partial | **P9a done:** sidecar per-provider + global-heavy `asyncio.Semaphore` (default-deny) + per-container `mem_limit`/`cpus` (16/8 GB profiles). Still one generic BullMQ queue `q.lookup`, worker concurrency **1** (per-provider queues = P9b-core). |
 | Frontend | 🔴 ~15% | `apps/web` is a dev console (raw JSON). **Out of scope for now** (owner). |
 | Auth / Payments | ⚫ 0% | Zero code. `users` / `payments` / `paid_at` schema exists unused. |
@@ -112,7 +112,7 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 |---|---|---|---|---|---|
 | ✅ | **P8f-1** | GHunt + Telegram credential login (mint inside sidecar) — *done, merged* | S | — | #5 |
 | ✅ | **P9a** | Sidecar per-provider semaphore (default-deny) + mem_limits/cpus (both profiles) — *done, merged* | S | — | #2, D1 |
-| 🟡 | **P9b-core** | **s1 done, merged:** `withBreaker` (DB-persist) + `withRateLimit`. **s2 pending:** per-provider BullMQ queues + `withSingleFlight` + cost counter + cancel-while-queued | M | P9a | #2 |
+| 🟡 | **P9b-core** | **wrappers done, merged:** `withBreaker` (DB-persist) + `withRateLimit` + `withSingleFlight`. **s2b pending:** per-provider BullMQ queues + cost counter + cancel-while-queued | M | P9a | #2 |
 | 4 | **P13** | Ops cockpit: Bull-Board (own auth) + `/admin` JSON + D2 config toggles + queue/RSS | S–M | P9b-core | #2, D2, D3 |
 | 5 | **P8f-2** | Providers (lean): **user-scanner + Hudson Rock** | S | P9a, P9b-core | #4 |
 | 6 | **P12** | Search orchestration (`searches` table + cascade-cancel) | M–L | P9b-core, P8f-2, P13 | #1 |
@@ -161,7 +161,7 @@ P9b-core → P9-pub → P11 → P15
 **Verify:** `pytest services/echo-osint-py`; a script POSTing 5 Maigrets + `docker stats --no-stream`.
 
 ### P9b-core · Per-provider queues + wrapper activation + cost counter + cancel fix — `req #2`
-> **Status (2026-07-02): stage 1 done + merged.** `withBreaker` (Redis state machine + DB-persist via `upsertHealth`) and `withRateLimit` (per-provider fixed-window) are live in `apply-wrappers`, unit-tested (fake Redis + injected clock). **Stage 2 (pending):** per-provider BullMQ queues + routing (task 1), `withSingleFlight` (task 3, Redis pub/sub — needs a running-stack integration test), cost counter (task 5), and the cancel-while-queued fix (task 4).
+> **Status (2026-07-02): all 3 wrappers done + merged.** `withBreaker` (Redis SM + DB-persist via `upsertHealth`), `withRateLimit` (per-provider fixed-window), and `withSingleFlight` (Redis `SET NX PX` lock + pub/sub fan-out) are live in `apply-wrappers` — order tracing → cache → single-flight → breaker → rate-limit → provider — each unit-tested with a fake Redis (injected clock / pub-sub bus). **Stage 2b (pending):** per-provider BullMQ queues + routing (task 1), cost counter (task 5), and the cancel-while-queued fix (task 4) — all touch the api/worker BullMQ wiring; land them together with a worker/queue Testcontainers integration test.
 **Goal:** activate the stubbed wrappers, split heavy providers onto their own queues, **persist breaker state to the DB**, and fix the cancel-while-queued race.
 **Invariant:** `per-provider BullMQ concurrency ≤ that provider's sidecar semaphore`, and `Σ(BullMQ over sidecar providers) ≤ GLOBAL_HEAVY_CONCURRENCY` — same env knob as P9a.
 **Tasks:**
