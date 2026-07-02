@@ -11,3 +11,22 @@ export function lookupEventsKey(lookupId: string): string {
 export function lookupCancelChannel(lookupId: string): string {
   return `lookup:cancel:${lookupId}`
 }
+
+/**
+ * Persisted cancel flag. Set by the api when a lookup is cancelled; read
+ * at the top of the worker's job handler so a job cancelled while still
+ * `waiting` in the queue aborts before its provider ever runs (the pub/sub
+ * channel above only reaches an already-running job).
+ */
+export function lookupCancelledKey(lookupId: string): string {
+  return `lookup:cancelled:${lookupId}`
+}
+
+/**
+ * Per-provider daily run counter (`cost:<provider>:<YYYYMMDD>`). INCR'd once
+ * per run; a soft `COST_DAILY_WARN` threshold logs a warning. Enforcement
+ * (hard cap) is deferred to P9-pub.
+ */
+export function providerCostKey(providerId: string, yyyymmdd: string): string {
+  return `cost:${providerId}:${yyyymmdd}`
+}
