@@ -2,18 +2,17 @@
 
 OSINT aggregator backend. Wraps free OSINT tools (Sherlock, Maigret, etc.) behind a uniform HTTP API with live progress streaming, durable job queueing, and per-provider rate-limit / circuit-breaker protection.
 
-> **Status:** Pre-implementation. Architecture and execution plan are committed; code work begins per [`docs/AGENT_PLAN.md`](./docs/AGENT_PLAN.md).
+> **Status:** Backend engine implemented (14 providers, SSE streaming, Redis cache). Remaining product layers (guardrails, search orchestration, ops surface, auth, payments) are planned in [`docs/ROADMAP.md`](./docs/ROADMAP.md).
 
 ## Documentation map
 
 | File | What it is |
 |---|---|
 | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Canonical system view: components, data flow, deployment shape. Read this first. |
-| [`docs/AGENT_PLAN.md`](./docs/AGENT_PLAN.md) | Phase-by-phase execution plan designed for an executor agent (or human). |
+| [`docs/ROADMAP.md`](./docs/ROADMAP.md) | Backend roadmap (P8f→P15): current state, phase sequencing, plan of record. |
 | [`docs/PROVIDERS.md`](./docs/PROVIDERS.md) | OSINT provider catalog — what each provider does and where it slots in. |
 | [`docs/RUNBOOK.md`](./docs/RUNBOOK.md) | Operational quick reference — how to deploy, debug, recover. |
 | [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) | Local development guide — running the stack and providers on your machine. |
-| [`docs/SMOKE_TEST.md`](./docs/SMOKE_TEST.md) | Step-by-step local smoke run of the API (copy-paste commands). |
 | [`docs/OWNER_TODO.md`](./docs/OWNER_TODO.md) | One-time owner setup actions (credentials for env-conditional providers). |
 | [`docs/adr/`](./docs/adr/) | Architecture Decision Records — every load-bearing choice, why, and what was rejected. |
 
@@ -41,7 +40,7 @@ See [`docs/adr/`](./docs/adr/) for the rationale on each choice.
 - Frontend
 - i18n
 - Multi-region
-- **Public deployment** — code is built, tested, and runnable locally only. Production hosting (P11 of [`docs/AGENT_PLAN.md`](./docs/AGENT_PLAN.md)) is **deferred until explicitly activated**.
+- **Public deployment** — code is built, tested, and runnable locally only. Production hosting (P11 of [`docs/ROADMAP.md`](./docs/ROADMAP.md)) is **deferred until explicitly activated**.
 
 These are reserved in the schema and acknowledged in [ADR-0012](./docs/adr/0012-no-auth-no-payments-phase1.md); deferred per project direction.
 
@@ -109,8 +108,8 @@ docker compose logs -f worker
 docker compose down -v
 ```
 
-The local stack does **not** include Caddy or any reverse proxy — the API container exposes port 3000 directly on `127.0.0.1`. Production deployment with TLS is deferred (see [P11 in the agent plan](./docs/AGENT_PLAN.md#p11--deployment-deferred--out-of-initial-scope)).
+The local stack does **not** include Caddy or any reverse proxy — the API container exposes port 3000 directly on `127.0.0.1`. Production deployment with TLS is deferred (see [P11 in the roadmap](./docs/ROADMAP.md)).
 
 ## Contributing / agent workflow
 
-If you're an executor agent picking up work: start with [`docs/AGENT_PLAN.md`](./docs/AGENT_PLAN.md) — phases are sized for one PR each and have explicit definition-of-done checks.
+If you're an executor agent picking up work: start with [`docs/ROADMAP.md`](./docs/ROADMAP.md) — phases are sized for one PR each and have explicit definition-of-done checks.

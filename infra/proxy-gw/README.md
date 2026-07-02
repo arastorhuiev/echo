@@ -52,8 +52,8 @@ When the project drops every scrape-based provider, the proxy infra goes too. Ex
    - Delete the `HTTPS_PROXY=`, `HTTP_PROXY=`, `NO_PROXY=` lines and their section header.
 4. `docs/RUNBOOK.md`:
    - Delete the entire "Proxy gateway" section.
-5. `docs/AGENT_PLAN.md`:
-   - Mark P7a as `superseded` (don't delete — historical record).
+5. `docs/ROADMAP.md`:
+   - Note the proxy / P7a removal in the roadmap (historical record).
 
 That is the full removal. No Python, TypeScript, NestJS, Drizzle, or test-file changes anywhere. If any of those are required during removal, **rule 1 was broken at some earlier point** — that is the bug, not the removal.
 

@@ -1,6 +1,6 @@
 # Architecture
 
-> Canonical system view for the **echo** backend. This document is short on purpose. Detailed rationale lives in [`adr/`](./adr/); execution sequencing lives in [`AGENT_PLAN.md`](./AGENT_PLAN.md); operations live in [`RUNBOOK.md`](./RUNBOOK.md).
+> Canonical system view for the **echo** backend. This document is short on purpose. Detailed rationale lives in [`adr/`](./adr/); execution sequencing lives in [`ROADMAP.md`](./ROADMAP.md); operations live in [`RUNBOOK.md`](./RUNBOOK.md).
 
 ## Purpose
 
@@ -257,7 +257,7 @@ See `README.md` for the one-liner version and [`adr/`](./adr/) for the rationale
 
 ## What this document is NOT
 
-- Not a tutorial — see `AGENT_PLAN.md` for "how to build it".
+- Not a tutorial — see `ROADMAP.md` for "how to build it".
 - Not an operations manual — see `RUNBOOK.md`.
 - Not exhaustive — see `adr/` for the *why* on every load-bearing decision.
 - Not frozen — when an ADR changes, this document changes with it.
