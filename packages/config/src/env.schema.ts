@@ -40,6 +40,16 @@ export const envSchema = z.object({
   // stack fails fast rather than booting an unprotected admin surface;
   // compared in constant time. Rotate by changing this and restarting.
   ADMIN_TOKEN: z.string().min(1),
+
+  // Paywall seam (P14). `false` (default) ⇒ the entitlement gate is OPEN:
+  // every public lookup/search is allowed and stamped paid, so results stay
+  // testable end-to-end. `true` ⇒ require a paid entitlement (402 without
+  // one) — flipped on when real payments (P15) land. Parsed explicitly
+  // because a bare `z.coerce.boolean()` treats the string "false" as true.
+  PAYMENTS_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 })
 
 export type EnvSchema = z.infer<typeof envSchema>

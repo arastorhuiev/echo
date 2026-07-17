@@ -47,3 +47,8 @@ export async function markCancelled(db: Db, id: string): Promise<void> {
     .set({ status: "cancelled", finishedAt: new Date() })
     .where(eq(searches.id, id))
 }
+
+/** Stamp the paywall entitlement (P14). Set once the gate allows the search. */
+export async function markPaid(db: Db, id: string): Promise<void> {
+  await db.update(searches).set({ paidAt: new Date() }).where(eq(searches.id, id))
+}

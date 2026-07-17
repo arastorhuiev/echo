@@ -99,6 +99,11 @@ export class SearchService implements OnModuleInit, OnModuleDestroy {
     const kind = classifyIdentifier(identifier)
     const search = await repositories.searches.create(this.dbClient.db, { identifier, kind })
 
+    // Paywall stamp (P14). The EntitlementGuard on POST /api/search already
+    // allowed this request, so record the search paid; its children run via
+    // the internal path and inherit entitlement from the parent.
+    await repositories.searches.markPaid(this.dbClient.db, search.id)
+
     // Resolve applicable targets: present in the registry, enabled, and whose
     // built query passes the provider's inputSchema.
     const children: Array<{ providerId: string; query: unknown }> = []

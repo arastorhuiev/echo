@@ -106,6 +106,12 @@ export class LookupsService {
       ipAddress: input.ipAddress ?? null,
     })
 
+    // Paywall stamp (P14). This is the gated public path — reaching here means
+    // the EntitlementGuard on POST /api/lookups already allowed the request,
+    // so record it paid. (Orchestration children bypass enqueue, so they are
+    // never stamped here — the parent search carries the paid marker.)
+    await repositories.lookups.markPaid(this.dbClient.db, lookup.id)
+
     const jobData: LookupJobData = {
       lookupId: lookup.id,
       providerId: provider.id,

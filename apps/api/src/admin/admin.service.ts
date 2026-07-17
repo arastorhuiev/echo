@@ -62,6 +62,7 @@ export class AdminService {
         OTEL_EXPORTER_OTLP_ENDPOINT: this.config.get("OTEL_EXPORTER_OTLP_ENDPOINT") ?? null,
         METRICS_ALLOWLIST: this.config.get("METRICS_ALLOWLIST") ?? null,
         COST_DAILY_WARN: this.config.get("COST_DAILY_WARN"),
+        PAYMENTS_ENABLED: this.config.get("PAYMENTS_ENABLED"),
       },
       // DATABASE_URL / REDIS_URL / ADMIN_TOKEN are secrets — never exposed.
       providers: await this.providerSnapshots(),
