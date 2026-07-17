@@ -33,8 +33,12 @@ export function applicableTargets(kind: SearchKind, identifier: string): SearchT
       return [
         { providerId: "phonenumbers", query: { phone: identifier } },
         { providerId: "phoneinfoga", query: { phone: identifier } },
-        // ignorant only accepts bare digits (its inputSchema is /^\d+$/).
-        { providerId: "ignorant", query: { phone: identifier.replace(/\D/g, "") } },
+        // NOTE: `ignorant` is intentionally NOT fanned out. It requires a
+        // SPLIT `{ country_code, phone }` (both bare digits), and reliably
+        // deriving the country code from a raw identifier needs full E.164
+        // parsing (a phone library) — a naive split is ambiguous. It stays
+        // available via a direct POST /api/lookups with the structured input.
+        // (Follow-up: parse with libphonenumber to add it to the fan-out.)
       ]
     case "image":
       return [{ providerId: "exiftool", query: { image_url: identifier } }]

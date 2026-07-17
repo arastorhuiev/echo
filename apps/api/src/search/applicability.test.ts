@@ -20,14 +20,12 @@ describe("applicableTargets", () => {
     expect(targets[0]?.query).toEqual({ email: "a@b.com" })
   })
 
-  it("strips non-digits for ignorant but keeps the raw phone for the others", () => {
+  it("fans a phone out to phonenumbers + phoneinfoga (raw), excluding ignorant", () => {
     const targets = applicableTargets("phone", "+48 537-529-192")
-    expect(targets.find((t) => t.providerId === "phonenumbers")?.query).toEqual({
-      phone: "+48 537-529-192",
-    })
-    expect(targets.find((t) => t.providerId === "ignorant")?.query).toEqual({
-      phone: "48537529192",
-    })
+    expect(targets.map((t) => t.providerId)).toEqual(["phonenumbers", "phoneinfoga"])
+    expect(targets[0]?.query).toEqual({ phone: "+48 537-529-192" })
+    // ignorant needs a split {country_code, phone} we can't reliably derive here.
+    expect(targets.find((t) => t.providerId === "ignorant")).toBeUndefined()
   })
 
   it("maps an image identifier to exiftool", () => {
