@@ -40,6 +40,7 @@ import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
 import { LookupsModule } from "@/lookups/lookups.module"
+import { SearchModule } from "@/search/search.module"
 
 const isProd = process.env.NODE_ENV === "production"
 
@@ -142,6 +143,8 @@ const isProd = process.env.NODE_ENV === "production"
     RedisModule,
     // Generic lookup processor — runs whatever the api enqueues.
     LookupsModule,
+    // Search-orchestration aggregator — q.search consumer (P12).
+    SearchModule,
   ],
 })
 export class AppModule {}

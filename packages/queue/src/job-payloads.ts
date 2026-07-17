@@ -11,3 +11,16 @@ export interface LookupJobData {
   /** Provider-validated query payload (already passed inputSchema.parse). */
   readonly query: unknown
 }
+
+/**
+ * BullMQ job payload for the `q.search` orchestration queue (P12). The api
+ * has already written the `searches` row + every child `lookups` row and
+ * enqueued the children on their per-provider queues; the aggregator job
+ * just watches the children's event streams and merges them.
+ */
+export interface SearchJobData {
+  /** UUID of the `searches` row. */
+  readonly searchId: string
+  /** UUIDs of the child `lookups` rows to aggregate, each with its providerId. */
+  readonly children: ReadonlyArray<{ readonly lookupId: string; readonly providerId: string }>
+}

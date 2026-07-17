@@ -1,0 +1,27 @@
+meta {
+  name: search - cancel (cascade)
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{apiBase}}/search/{{searchId}}
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.cancelRequested: isDefined
+}
+
+docs {
+  Cascade-cancel an in-flight search (P12). Sets the search cancel flag,
+  then for every child lookup: sets its persisted cancel flag, drops it
+  from its queue if still waiting, and publishes on its cancel channel.
+  A child cancelled while `waiting` never enters its provider run
+  (P9b-core cancel-flag guarantee). The aggregator emits a terminal
+  `Cancelled` on the search stream.
+
+  Run this quickly after create-search while children are still queued to
+  observe a `waiting` child being dropped before it runs.
+}

@@ -9,6 +9,8 @@ export interface CreateLookupInput {
   query: unknown
   ipAddress?: string | null
   userId?: string | null
+  /** Parent orchestrated search (P12); null/undefined for a standalone lookup. */
+  searchId?: string | null
 }
 
 export async function create(db: Db, input: CreateLookupInput): Promise<Lookup> {
@@ -20,6 +22,7 @@ export async function create(db: Db, input: CreateLookupInput): Promise<Lookup> 
       query: input.query,
       ipAddress: input.ipAddress ?? null,
       userId: input.userId ?? null,
+      searchId: input.searchId ?? null,
     })
     .returning()
   if (!row) throw new Error("INSERT...RETURNING returned no row")
@@ -85,6 +88,20 @@ export async function findCachedByHash(
     .orderBy(desc(lookups.createdAt))
     .limit(1)
   return row ?? null
+}
+
+export interface ChildLookup {
+  readonly id: string
+  readonly providerId: string
+  readonly status: string
+}
+
+/** The child lookups of an orchestrated search (P12), for cascade-cancel. */
+export async function bySearch(db: Db, searchId: string): Promise<ChildLookup[]> {
+  return db
+    .select({ id: lookups.id, providerId: lookups.providerId, status: lookups.status })
+    .from(lookups)
+    .where(eq(lookups.searchId, searchId))
 }
 
 export async function markRunning(db: Db, id: string): Promise<void> {

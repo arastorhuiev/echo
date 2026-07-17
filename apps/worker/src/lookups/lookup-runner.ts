@@ -75,11 +75,16 @@ export class LookupRunner {
       return { cancelled: true }
     }
 
-    // BullMQ retry: prior attempt's lookup_events would clash with the
-    // new attempt's (lookup_id, seq) under the unique index. Idempotent
-    // on the first attempt — no rows yet.
+    // BullMQ retry: wipe the prior attempt's events from BOTH stores before
+    // re-running. Postgres `lookup_events` would otherwise clash on the
+    // (lookup_id, seq) unique index; the Redis stream would otherwise KEEP
+    // the prior attempt's terminal `Failed` — so an SSE consumer (and the
+    // P12 search aggregator, which latches the first terminal per child)
+    // would see a stale Failed and miss the successful retry. Idempotent on
+    // the first attempt (no rows / empty stream yet).
     if (job.attemptsMade > 0) {
       await repositories.lookupEvents.deleteByLookup(this.dbClient.db, lookupId)
+      await this.redis.del(streamKey)
     }
 
     const wrapped = applyWrappers(provider, {

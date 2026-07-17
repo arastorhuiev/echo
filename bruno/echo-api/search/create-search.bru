@@ -1,0 +1,44 @@
+meta {
+  name: search - create (username fan-out)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{apiBase}}/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "identifier": "{{testUsername}}"
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.kind: eq username
+  res.body.streamUrl: matches ^/api/search/.+/stream$
+}
+
+vars:post-response {
+  searchId: res.body.id
+}
+
+docs {
+  One identifier → fan-out to every applicable provider (P12). The api
+  classifies the identifier (email / username / phone / image; domain ⇒
+  unsupported), writes a `searches` row + one child `lookups` row per
+  applicable provider, and enqueues an aggregator job.
+
+  Watch the merged stream (SSE — use curl, Bruno doesn't render it):
+    curl -N {{apiBase}}/search/{{searchId}}/stream
+  The stream carries per-provider `Partial`s and ends with a `Final`
+  whose `data` is the merged, deduped report (accounts correlated by URL
+  with their contributing providers in `sources`).
+
+  Try `"identifier": "someone@example.com"` (email), `"+48537529192"`
+  (phone), or `"example.com"` (domain ⇒ unsupported, empty report).
+}
