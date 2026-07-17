@@ -14,7 +14,7 @@
 - **What echo is:** a cheap freemium **person-lookup** OSINT aggregator (email / phone / username → an aggregated report about a person), modeled on but undercutting osint.industries / claritycheck. **Not** domain/company recon.
 - **Where we are:** the *engine* is done (P0–P8: 14 providers, SSE streaming, real Redis cache). The *product layers* are not: no guardrails (rate-limit/breaker/single-flight are noop stubs, sidecar has **zero** concurrency caps → a Maigret loop OOMs the box), no aggregation/"search" layer (today 1 lookup = 1 provider), no auth, no payments.
 - **What's locked (owner decisions):** payments **last** (a stub keeps results always testable); a **light ops/admin** surface (Bull-Board + `/admin` JSON, no consumer web); providers **free-only** (no paid APIs) pruned to **user-scanner + Hudson Rock**; hosting **CX42 16 GB** with one-command fallback to **CX32 8 GB**; positioning **person-lookup**.
-- **First action to pick tomorrow:** **P13 — ops cockpit** (Bull-Board + `/admin` JSON + config toggles). ✅ **P8f-1**, ✅ **P9a**, and ✅ **P9b-core (ALL of it)** — the 3 wrappers, cancel-while-queued + cost counter, **and now per-provider BullMQ queues + routing** (task 1: the single `q.lookup` Nest `@Processor` was replaced with imperative per-provider `Worker`s, one `q.<id>` per provider capped at `maxConcurrent`) — are **done and merged to `main`** (2026-07-02 / 2026-07-17).
+- **First action to pick tomorrow:** **P8f-2 — providers (lean): user-scanner + Hudson Rock**. ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core (ALL of it)**, and ✅ **P13 — ops cockpit** (Bull-Board at `/admin/queues` + `/api/admin` JSON status/config + the two D2 toggles, bearer/basic auth) are **done and merged to `main`** (through 2026-07-17).
 - **Full working artifacts** from the planning session (free-libs research matrices, the raw plan-v3, the fix-lists) live in the session scratchpad — ask if you want them copied into `docs/research/`.
 
 ---
@@ -113,7 +113,7 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 | ✅ | **P8f-1** | GHunt + Telegram credential login (mint inside sidecar) — *done, merged* | S | — | #5 |
 | ✅ | **P9a** | Sidecar per-provider semaphore (default-deny) + mem_limits/cpus (both profiles) — *done, merged* | S | — | #2, D1 |
 | ✅ | **P9b-core** | **done + merged:** 3 wrappers, cancel-while-queued, cost counter, **and per-provider BullMQ queues + routing** (task 1 — imperative-Worker rewrite, 2026-07-17) | M | P9a | #2 |
-| 4 | **P13** | Ops cockpit: Bull-Board (own auth) + `/admin` JSON + D2 config toggles + queue/RSS | S–M | P9b-core | #2, D2, D3 |
+| ✅ | **P13** | Ops cockpit: Bull-Board (`/admin/queues`, Basic auth) + `/api/admin` JSON status/config + D2 toggles (enable/disable, breaker-reset) — *done, merged 2026-07-17* | S–M | P9b-core | #2, D2, D3 |
 | 5 | **P8f-2** | Providers (lean): **user-scanner + Hudson Rock** | S | P9a, P9b-core | #4 |
 | 6 | **P12** | Search orchestration (`searches` table + cascade-cancel) | M–L | P9b-core, P8f-2, P13 | #1 |
 | 7 | **P14** | Entitlement gate (public entrypoints only) + payment **STUB** (bypass open) | S–M | P12 | #1 |
@@ -174,7 +174,9 @@ P9b-core → P9-pub → P11 → P15
 **Verify:** `pnpm -F @echo/providers test`; induced-failure test then `psql -c "select id,breaker_state from providers"`; restart worker, re-check.
 
 ### P13 · Ops cockpit (Bull-Board own auth + `/admin` JSON + config toggles) — `req #2, D2, D3`
-**Goal:** cheap backend visibility **before** fan-out exists — plus the two actionable D2 toggles. Protected, no consumer UI.
+> **Status (2026-07-17): DONE + merged.** `apps/api/src/admin/` — `AdminController` (`@Controller('admin')` under the global `api` prefix ⇒ **`/api/admin/*`**) guarded by `AdminGuard` (Bearer `ADMIN_TOKEN`, constant-time SHA-256 + `timingSafeEqual`). Endpoints: `GET /api/admin/status` (per-queue counts via `QueueRouter.jobCounts()`, per-provider breaker/enabled merged from registry+DB, daily cost, recent 50 lookups **PII-stripped**, up/down health, api-process RSS), `GET /api/admin/config` (allow-listed non-secret env + per-provider caps), `POST /api/admin/providers/:id/enabled` (writes `providers.enabled`; `LookupsService.enqueue` now 503-rejects a disabled provider **before** writing a row/job), `POST /api/admin/providers/:id/breaker/reset` (clears the **live Redis** `breaker:<id>:*` keys via the new shared `breakerKeys()` helper **then** the DB mirror). **Bull-Board** at `/admin/queues` mounted on the raw Fastify instance inside an encapsulated scope with a Basic-auth `onRequest` hook (encapsulated so Fastify's decoded routing — not a raw-URL `startsWith` — gates it; a code-review found + we fixed a percent-encoded-path auth-bypass). `ADMIN_TOKEN` added to `env.schema` (required non-empty), `.env.example`, and both compose services. Auth + toggle logic unit-tested (`admin-auth.test`, `admin.service.test`, `lookups.service.test`). **Docker absent in the build env ⇒ the live Bull-Board render + `/api/admin` HTTP round-trip were NOT exercised**; unit coverage + the reviewer's `fastify.inject` proof stand in. **Follow-up (gated before P11):** the compose default `ADMIN_TOKEN=dev-admin-token-change-me` is a known value — a prod deploy must set a real token (drop the default or gate it non-prod).
+>
+> **Goal:** cheap backend visibility **before** fan-out exists — plus the two actionable D2 toggles. Protected, no consumer UI.
 **Tasks:**
 0. **SPIKE:** validate `@bull-board/fastify` against the app's pinned `@fastify/static ^9.1.3` + `fastify ^5.3.3`; fallback = mount Bull-Board on a separate Fastify instance/port if peers clash.
 1. **Bull-Board** at `/admin/queues` on the raw Fastify instance behind a Fastify **`preHandler`** basic-auth sharing `ADMIN_TOKEN` (a Nest guard can't protect a route mounted outside Nest routing).
@@ -272,6 +274,7 @@ Pick one (first two phases are independent):
 - ✅ **`P8f-1` — GHunt/Telegram login** — done, merged 2026-07-02 (interactive burner login stays a manual owner step).
 - ✅ **`P9a` — safety floor** — done, merged 2026-07-02 (sidecar semaphores + `mem_limit`/`cpus` profiles; live fan-out RSS load-test still a manual/CI step).
 - ✅ **`P9b-core` — done, merged 2026-07-17.** Per-provider BullMQ queues + the 3 wrappers + cost counter + cancel-while-queued fix all complete.
-- **`P13` — next.** Ops cockpit: Bull-Board + `/admin` JSON + D2 config toggles + queue/RSS.
+- ✅ **`P13` — done, merged 2026-07-17.** Ops cockpit: Bull-Board + `/api/admin` JSON + D2 toggles.
+- **`P8f-2` — next.** Providers (lean): user-scanner + Hudson Rock (both free/keyless — in scope).
 
 Each phase = a new branch `phase/<id>-<slug>` + a draft PR, `pnpm check` green at the end, owner merges. Say which one and I'll open the branch and start.
