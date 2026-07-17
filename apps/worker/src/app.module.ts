@@ -8,6 +8,8 @@ import {
   GhuntProviderModule,
   HIBP_PROVIDER,
   HibpProviderModule,
+  HUDSONROCK_PROVIDER,
+  HudsonRockProviderModule,
   IGNORANT_PROVIDER,
   IgnorantProviderModule,
   MAIGRET_PROVIDER,
@@ -66,6 +68,7 @@ const isProd = process.env.NODE_ENV === "production"
       imports: [
         SherlockProviderModule.forRoot(),
         HibpProviderModule.forRoot(),
+        HudsonRockProviderModule.forRoot(),
         WhatsmynameProviderModule.forRoot(),
         PhonenumbersProviderModule.forRoot(),
         MaigretProviderModule.forRoot(),
@@ -82,6 +85,7 @@ const isProd = process.env.NODE_ENV === "production"
       inject: [
         SHERLOCK_PROVIDER,
         HIBP_PROVIDER,
+        HUDSONROCK_PROVIDER,
         WHATSMYNAME_PROVIDER,
         PHONENUMBERS_PROVIDER,
         MAIGRET_PROVIDER,
@@ -98,6 +102,7 @@ const isProd = process.env.NODE_ENV === "production"
       useFactory: (
         sherlock: OsintProvider,
         hibp: OsintProvider,
+        hudsonrock: OsintProvider,
         whatsmyname: OsintProvider,
         phonenumbers: OsintProvider,
         maigret: OsintProvider,
@@ -114,6 +119,7 @@ const isProd = process.env.NODE_ENV === "production"
         const real = [
           sherlock,
           hibp,
+          hudsonrock,
           whatsmyname,
           phonenumbers,
           maigret,

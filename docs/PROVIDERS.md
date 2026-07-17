@@ -286,6 +286,25 @@ in `bruno/echo-api/environments/local.bru`:
 - **Caveats:** the password itself never crosses a network boundary,
   but the request body is visible in Bruno's UI — use placeholders.
 
+### hudsonrock
+
+- **Status:** implemented (P8f-2)
+- **What it does:** Keyless infostealer-breach intel from Hudson Rock
+  Cavalier — given an email or username, reports whether it appears in
+  known info-stealer malware logs and returns the associated stealer
+  records. Complements the HIBP password hashcheck with
+  account-compromise signal (a different, non-password breach axis).
+- **Integration:** Node-native HTTP fetch (no sidecar, no auth), wrapped
+  by the standard `withCache` + breaker + rate-limit pipeline.
+- **Source:** `https://cavalier.hudsonrock.com/api/json/v2/osint-tools/search-by-{email,username}`
+- **Input:** `{ "email": string }` **or** `{ "username": string }`.
+- **Output:** `{ "found": boolean, "message": string, "stealerCount": number, "stealers": unknown[] }`.
+- **Files:** `packages/providers/src/hudsonrock/`
+- **Bruno:** `lookups/create-hudsonrock.bru`
+- **Caveats:** free/keyless public endpoint with an undocumented
+  rate-limit — it's cost-capped + breaker-guarded like every provider.
+  `found` is derived from the presence of stealer records.
+
 ### ghunt † env-conditional
 
 - **Status:** implemented (P8c). Activates once `./secrets/.malfrats/ghunt/creds.m`

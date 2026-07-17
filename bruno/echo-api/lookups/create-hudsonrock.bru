@@ -1,0 +1,38 @@
+meta {
+  name: lookups - create (hudsonrock email)
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{apiBase}}/lookups
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "providerId": "hudsonrock",
+    "query": {
+      "email": "{{testEmail}}"
+    }
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.id: isDefined
+  res.body.streamUrl: matches ^/api/lookups/.+/stream$
+}
+
+vars:post-response {
+  lookupId: res.body.id
+}
+
+docs {
+  Hudson Rock Cavalier infostealer-breach lookup (keyless, free). Swap the
+  `email` field for `{ "username": "..." }` to hit the username endpoint.
+  A clean identifier streams a Final with `found: false`; an identifier
+  present in an info-stealer log streams `found: true` with the stealer
+  records. Cached for 6h on repeat (same identifier ⇒ cache hit).
+}
