@@ -5,6 +5,10 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
+    // Set required env vars before any test module (and its transitive
+    // @echo/config ConfigModule.forRoot validation) evaluates. Keeps unit
+    // tests hermetic — green on CI where no .env exists.
+    setupFiles: ["./test/vitest-setup-env.ts"],
     // ADR-0013: tests are co-located in src/ next to the code they exercise.
     // The legacy `test/` location is also accepted for shared helpers /
     // fixture-heavy suites. Default `pnpm test` is unit-only — integration

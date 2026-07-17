@@ -39,7 +39,6 @@ describe("EchoMetricsCollector", () => {
     const registry = new OsintProviderRegistry([fakeProvider("maigret")])
     const queues = { jobCounts: vi.fn().mockResolvedValue({ maigret: { waiting: 3, active: 1 } }) }
     const redis = { mget: vi.fn().mockResolvedValue(["7"]) }
-    const config = { get: () => "" }
     const dbClient = { db: {} }
     providersRepo.list.mockResolvedValue([{ id: "maigret", breakerState: "open" }])
     const metrics = new MetricsService()
@@ -50,8 +49,6 @@ describe("EchoMetricsCollector", () => {
       // biome-ignore lint/suspicious/noExplicitAny: minimal DI stubs.
       redis as any,
       registry,
-      // biome-ignore lint/suspicious/noExplicitAny: minimal DI stubs.
-      config as any,
       // biome-ignore lint/suspicious/noExplicitAny: minimal DI stubs.
       queues as any,
       metrics,
