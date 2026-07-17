@@ -14,7 +14,7 @@
 - **What echo is:** a cheap freemium **person-lookup** OSINT aggregator (email / phone / username → an aggregated report about a person), modeled on but undercutting osint.industries / claritycheck. **Not** domain/company recon.
 - **Where we are:** the *engine* is done (P0–P8: 14 providers, SSE streaming, real Redis cache). The *product layers* are not: no guardrails (rate-limit/breaker/single-flight are noop stubs, sidecar has **zero** concurrency caps → a Maigret loop OOMs the box), no aggregation/"search" layer (today 1 lookup = 1 provider), no auth, no payments.
 - **What's locked (owner decisions):** payments **last** (a stub keeps results always testable); a **light ops/admin** surface (Bull-Board + `/admin` JSON, no consumer web); providers **free-only** (no paid APIs) pruned to **user-scanner + Hudson Rock**; hosting **CX42 16 GB** with one-command fallback to **CX32 8 GB**; positioning **person-lookup**.
-- **First action to pick tomorrow:** **P8f-2 — providers (lean): user-scanner + Hudson Rock**. ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core (ALL of it)**, and ✅ **P13 — ops cockpit** (Bull-Board at `/admin/queues` + `/api/admin` JSON status/config + the two D2 toggles, bearer/basic auth) are **done and merged to `main`** (through 2026-07-17).
+- **First action to pick tomorrow:** **P12 — search orchestration** (`searches` table → fan-out to every applicable provider → merged report). ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core**, ✅ **P13 — ops cockpit**, and ✅ **P8f-2/Hudson Rock** (keyless infostealer intel; user-scanner spike-deferred) are **done and merged to `main`** (through 2026-07-17).
 - **Full working artifacts** from the planning session (free-libs research matrices, the raw plan-v3, the fix-lists) live in the session scratchpad — ask if you want them copied into `docs/research/`.
 
 ---
@@ -114,7 +114,7 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 | ✅ | **P9a** | Sidecar per-provider semaphore (default-deny) + mem_limits/cpus (both profiles) — *done, merged* | S | — | #2, D1 |
 | ✅ | **P9b-core** | **done + merged:** 3 wrappers, cancel-while-queued, cost counter, **and per-provider BullMQ queues + routing** (task 1 — imperative-Worker rewrite, 2026-07-17) | M | P9a | #2 |
 | ✅ | **P13** | Ops cockpit: Bull-Board (`/admin/queues`, Basic auth) + `/api/admin` JSON status/config + D2 toggles (enable/disable, breaker-reset) — *done, merged 2026-07-17* | S–M | P9b-core | #2, D2, D3 |
-| 5 | **P8f-2** | Providers (lean): **user-scanner + Hudson Rock** | S | P9a, P9b-core | #4 |
+| 🟡 | **P8f-2** | Providers (lean): ✅ **Hudson Rock** (Node HTTP, keyless) done+merged 2026-07-17; **user-scanner spike-deferred** (undocumented CLI JSON export ⇒ needs a Docker/Python integration spike) | S | P9a, P9b-core | #4 |
 | 6 | **P12** | Search orchestration (`searches` table + cascade-cancel) | M–L | P9b-core, P8f-2, P13 | #1 |
 | 7 | **P14** | Entitlement gate (public entrypoints only) + payment **STUB** (bypass open) | S–M | P12 | #1 |
 | 8 | **P10** | Observability polish | S | P9b-core, P12, P13 | #2 |
@@ -189,7 +189,11 @@ P9b-core → P9-pub → P11 → P15
 **Verify:** `curl -H "Authorization: Bearer $ADMIN_TOKEN" localhost:3000/admin/status | jq`; `curl -so /dev/null -w '%{http_code}' localhost:3000/admin/queues` ⇒ 401.
 
 ### P8f-2 · Providers (lean): user-scanner + Hudson Rock — `req #4`
-**Goal:** fill the flagship email→accounts gap with the two chosen free tools.
+> **Status (2026-07-17): Hudson Rock DONE + merged; user-scanner SPIKE-DEFERRED.**
+> - ✅ **Hudson Rock Cavalier** — Node-native HTTP provider `packages/providers/src/hudsonrock/` (id `hudsonrock`, category `breach`), keyless `search-by-email` / `search-by-username`, wrapped by the standard cache+breaker+rate-limit pipeline. Input is `{email}` **or** `{username}`; output `{found, message, stealerCount, stealers}` (`found` = stealer records present). Conformance + behaviour tests with mocked fetch; registered in **both** app modules (lockstep); `/info` card + `docs/PROVIDERS.md` card + `bruno/.../create-hudsonrock.bru`. `pnpm check` green (245 tests). Live positive-hit run needs Docker (deferred), but the HTTP contract is exercised via mocked fetch.
+> - ⏸️ **user-scanner** (`kaifcodec/user-scanner`, pip) — **not implemented; needs a spike first.** Research (2026-07-17): the tool is a real holehe successor (`user-scanner -e <email>` / `-u <username>`, `--hudson`), BUT its README documents **no CLI `--json`/export flag** — JSON is only reachable via **library mode** (`from user_scanner.core import engine`, `result.to_json()`), whose exact API is undocumented. Integrating blind against an unverified interface would be speculation, so per the roadmap's own "resolver dry-run gate first" + free-tool-fragility pre-mortem this is gated on a Docker/Python lane that: (1) `pip install --dry-run user-scanner` proves no `httpx==0.27.2` move; (2) confirms the library `engine` API + result shape; (3) then adds `user_scanner_runner.py` (socialscan_runner pattern) + FastAPI route + `USER_SCANNER_MAX_CONCURRENCY` semaphore entry + Node sidecar provider. **Hudson Rock already delivers the keyless account-compromise signal**, so the email→accounts gap is partially covered meanwhile.
+>
+> **Goal:** fill the flagship email→accounts gap with the two chosen free tools.
 **Tasks:**
 1. **user-scanner** (MIT, pip) — sidecar `user_scanner_runner.py` + FastAPI route + semaphore entry, following the maigret/socialscan pattern; `--hudson` on. **Resolver dry-run gate first:** `pip install --dry-run user-scanner` must not move `httpx==0.27.2` (isolate in a separate venv only if it does — expected fine, it's light/httpx-based).
 2. **Hudson Rock Cavalier** — **Node HTTP provider** (like `hibp`/`gravatar`, no sidecar) through `withCache`+backoff.
@@ -275,6 +279,7 @@ Pick one (first two phases are independent):
 - ✅ **`P9a` — safety floor** — done, merged 2026-07-02 (sidecar semaphores + `mem_limit`/`cpus` profiles; live fan-out RSS load-test still a manual/CI step).
 - ✅ **`P9b-core` — done, merged 2026-07-17.** Per-provider BullMQ queues + the 3 wrappers + cost counter + cancel-while-queued fix all complete.
 - ✅ **`P13` — done, merged 2026-07-17.** Ops cockpit: Bull-Board + `/api/admin` JSON + D2 toggles.
-- **`P8f-2` — next.** Providers (lean): user-scanner + Hudson Rock (both free/keyless — in scope).
+- 🟡 **`P8f-2` — Hudson Rock done, merged 2026-07-17.** user-scanner spike-deferred (undocumented CLI JSON export — see the P8f-2 detail).
+- **`P12` — next.** Search orchestration (`searches` table + fan-out + cascade-cancel).
 
 Each phase = a new branch `phase/<id>-<slug>` + a draft PR, `pnpm check` green at the end, owner merges. Say which one and I'll open the branch and start.
