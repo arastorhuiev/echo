@@ -1,4 +1,4 @@
-import type { JobsOptions } from "bullmq"
+import type { ConnectionOptions, JobsOptions } from "bullmq"
 import { queueName } from "@/queue-names.js"
 
 export interface DefaultQueueOptionsInput {
@@ -19,7 +19,7 @@ export interface DefaultQueueOptions {
  * - failed jobs retained 24 h or 5 000 most-recent for postmortem
  *
  * Per-provider concurrency / circuit-breaker / rate-limit policies live
- * on the Worker side (P5+), not in the producer's defaults.
+ * on the Worker side (P9b-core), not in the producer's defaults.
  */
 export function defaultQueueOptions(input: DefaultQueueOptionsInput): DefaultQueueOptions {
   return {
@@ -31,4 +31,17 @@ export function defaultQueueOptions(input: DefaultQueueOptionsInput): DefaultQue
       removeOnFail: { age: 24 * 3_600, count: 5_000 },
     },
   }
+}
+
+/**
+ * The single source of truth for the BullMQ Redis connection, shared by
+ * every imperative `Queue` (producer, apps/api) and `Worker` (consumer,
+ * apps/worker) across the per-provider queue fan-out.
+ *
+ * `maxRetriesPerRequest: null` is mandatory — BullMQ workers issue
+ * blocking commands (BRPOPLPUSH); with a finite retry budget ioredis
+ * aborts them and BullMQ throws "command not allowed when used by Bull".
+ */
+export function bullConnection(redisUrl: string): ConnectionOptions {
+  return { url: redisUrl, maxRetriesPerRequest: null }
 }

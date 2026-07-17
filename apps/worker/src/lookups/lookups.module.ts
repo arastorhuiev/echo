@@ -1,15 +1,14 @@
-import { Q_LOOKUP } from "@echo/queue"
-import { BullModule } from "@nestjs/bullmq"
 import { Module } from "@nestjs/common"
-import { LookupProcessor } from "@/lookups/lookup.processor"
+import { LookupRunner } from "@/lookups/lookup-runner"
+import { LookupWorkers } from "@/lookups/lookup-workers"
 
 /**
- * Consumer side of the lookup pipeline. registerQueue is required even
- * on the worker so @nestjs/bullmq constructs the BullMQ Worker bound
- * to `q.lookup` for the @Processor-decorated class.
+ * Consumer side of the lookup pipeline (P9b-core). `LookupWorkers`
+ * spins up one imperative BullMQ Worker per provider on module init,
+ * each bound to `q.<providerId>` with its own concurrency cap; every
+ * worker delegates to the shared provider-agnostic `LookupRunner`.
  */
 @Module({
-  imports: [BullModule.registerQueue({ name: Q_LOOKUP })],
-  providers: [LookupProcessor],
+  providers: [LookupRunner, LookupWorkers],
 })
 export class LookupsModule {}

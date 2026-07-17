@@ -3,9 +3,8 @@ import { repositories } from "@echo/db"
 import type { DbClient } from "@echo/db/client"
 import { DB_CLIENT, REDIS } from "@echo/nest"
 import { applyWrappers, OsintProviderRegistry, ProviderError } from "@echo/providers"
-import { type LookupJobData, lookupCancelChannel, lookupEventsKey, Q_LOOKUP } from "@echo/queue"
-import { Processor, WorkerHost } from "@nestjs/bullmq"
-import { Inject, Logger } from "@nestjs/common"
+import { type LookupJobData, lookupCancelChannel, lookupEventsKey } from "@echo/queue"
+import { Inject, Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import type { Job } from "bullmq"
 import { Redis } from "ioredis"
@@ -19,9 +18,19 @@ interface CancelSubscription {
   dispose(): Promise<void>
 }
 
-@Processor(Q_LOOKUP)
-export class LookupProcessor extends WorkerHost {
-  private readonly logger = new Logger(LookupProcessor.name)
+/**
+ * Provider-agnostic executor for a single lookup job. One instance is
+ * shared by every per-provider BullMQ `Worker` (see `LookupWorkers`);
+ * the concrete provider is resolved from `job.data.providerId` at run
+ * time, so the same runner drives `q.maigret`, `q.sherlock`, … alike.
+ *
+ * Split out of the former single `@Processor(q.lookup)` in P9b-core when
+ * the pipeline moved to per-provider queues with independent concurrency
+ * caps. The run logic itself is unchanged.
+ */
+@Injectable()
+export class LookupRunner {
+  private readonly logger = new Logger(LookupRunner.name)
 
   constructor(
     @Inject(DB_CLIENT) private readonly dbClient: DbClient,
@@ -29,9 +38,7 @@ export class LookupProcessor extends WorkerHost {
     private readonly registry: OsintProviderRegistry,
     // AppConfigService is a type alias; see sidecar health indicator for why @Inject is required.
     @Inject(ConfigService) private readonly config: AppConfigService,
-  ) {
-    super()
-  }
+  ) {}
 
   /**
    * Generic lookup runner — resolves the provider from the registry,
@@ -45,7 +52,7 @@ export class LookupProcessor extends WorkerHost {
    * AbortController; the wrapped provider's run() unwinds; we persist a
    * `Cancelled` event and mark the row.
    */
-  async process(job: Job<LookupJobData>): Promise<unknown> {
+  async run(job: Job<LookupJobData>): Promise<unknown> {
     const { lookupId, providerId, query } = job.data
     const streamKey = lookupEventsKey(lookupId)
 
