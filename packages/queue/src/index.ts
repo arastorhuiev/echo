@@ -7,6 +7,7 @@ export {
 } from "@/queue.config.js"
 export { queueName } from "@/queue-names.js"
 export {
+  costDay,
   lookupCancelChannel,
   lookupCancelledKey,
   lookupEventsKey,

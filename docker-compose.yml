@@ -57,6 +57,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       OSINT_PY_URL: ${OSINT_PY_URL:-http://osint-py:8000}
       OTEL_SERVICE_NAME: echo-api
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token-change-me}
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,6 +92,9 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       OSINT_PY_URL: ${OSINT_PY_URL:-http://osint-py:8000}
       OTEL_SERVICE_NAME: echo-worker
+      # Shared env schema requires ADMIN_TOKEN even though the worker
+      # doesn't serve /admin — it validates the same schema as the api.
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token-change-me}
     depends_on:
       postgres:
         condition: service_healthy

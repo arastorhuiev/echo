@@ -1,13 +1,13 @@
-import { lookupCancelledKey, providerCostKey } from "@echo/queue"
+import { costDay, lookupCancelledKey, providerCostKey } from "@echo/queue"
 import type { Redis } from "ioredis"
+
+// `costDay` now lives in @echo/queue (shared with the api ops cockpit that
+// reads the counter). Re-exported here so existing importers/tests are
+// unaffected.
+export { costDay }
 
 /** Keep the daily cost bucket around ~2 days so old days self-expire. */
 const COST_KEY_TTL_SEC = 2 * 24 * 3_600
-
-/** UTC `YYYYMMDD` bucket for the per-provider daily cost counter. */
-export function costDay(now: Date): string {
-  return now.toISOString().slice(0, 10).replace(/-/g, "")
-}
 
 /**
  * Was this lookup cancelled while its job was still queued? The api sets a

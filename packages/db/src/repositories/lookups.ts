@@ -31,6 +31,38 @@ export async function findById(db: Db, id: string): Promise<Lookup | null> {
   return row ?? null
 }
 
+export interface RecentLookup {
+  readonly id: string
+  readonly providerId: string
+  readonly status: string
+  readonly errorKind: string | null
+  readonly createdAt: Date
+  readonly startedAt: Date | null
+  readonly finishedAt: Date | null
+}
+
+/**
+ * The most recent `limit` lookups for the ops cockpit (P13 `/admin/status`).
+ * Deliberately omits `query` / `ipAddress` / `result` — the admin recent
+ * list must not surface raw PII (the retention/redaction follow-up is gated
+ * before P11). Ordered newest-first via `lookups_created_at_idx`.
+ */
+export async function recent(db: Db, limit = 50): Promise<RecentLookup[]> {
+  return db
+    .select({
+      id: lookups.id,
+      providerId: lookups.providerId,
+      status: lookups.status,
+      errorKind: lookups.errorKind,
+      createdAt: lookups.createdAt,
+      startedAt: lookups.startedAt,
+      finishedAt: lookups.finishedAt,
+    })
+    .from(lookups)
+    .orderBy(desc(lookups.createdAt))
+    .limit(limit)
+}
+
 /**
  * Returns the most recent successfully-completed lookup matching
  * (providerId, queryHash). Used by the cache lookup path.

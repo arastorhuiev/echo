@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis"
+import { breakerKeys } from "@/core/breaker-keys.js"
 import { type OsintProvider, ProviderError } from "@/core/provider.js"
 
 /**
@@ -56,9 +57,7 @@ export function withBreaker<Q, R>(
   const now = opts.now ?? Date.now
   const { failureThreshold, resetMs } = provider.defaults.breaker
   const id = provider.id
-  const stateKey = `breaker:${id}:state`
-  const failKey = `breaker:${id}:failures`
-  const openedKey = `breaker:${id}:opened_at`
+  const { state: stateKey, failures: failKey, openedAt: openedKey } = breakerKeys(id)
 
   async function persist(state: BreakerStateName, outcome: "success" | "failure"): Promise<void> {
     if (!opts.persist) return

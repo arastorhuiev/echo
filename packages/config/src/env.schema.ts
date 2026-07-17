@@ -34,6 +34,12 @@ export const envSchema = z.object({
   // The worker logs once when a provider crosses this many runs in a UTC
   // day; 0 disables the warning. Hard enforcement is deferred to P9-pub.
   COST_DAILY_WARN: z.coerce.number().int().nonnegative().default(500),
+
+  // Ops cockpit admin token (P13). Guards every /admin/* JSON endpoint
+  // AND the Bull-Board UI at /admin/queues. Required non-empty so the
+  // stack fails fast rather than booting an unprotected admin surface;
+  // compared in constant time. Rotate by changing this and restarting.
+  ADMIN_TOKEN: z.string().min(1),
 })
 
 export type EnvSchema = z.infer<typeof envSchema>
