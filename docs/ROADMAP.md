@@ -14,7 +14,7 @@
 - **What echo is:** a cheap freemium **person-lookup** OSINT aggregator (email / phone / username → an aggregated report about a person), modeled on but undercutting osint.industries / claritycheck. **Not** domain/company recon.
 - **Where we are:** the *engine* is done (P0–P8: 14 providers, SSE streaming, real Redis cache). The *product layers* are not: no guardrails (rate-limit/breaker/single-flight are noop stubs, sidecar has **zero** concurrency caps → a Maigret loop OOMs the box), no aggregation/"search" layer (today 1 lookup = 1 provider), no auth, no payments.
 - **What's locked (owner decisions):** payments **last** (a stub keeps results always testable); a **light ops/admin** surface (Bull-Board + `/admin` JSON, no consumer web); providers **free-only** (no paid APIs) pruned to **user-scanner + Hudson Rock**; hosting **CX42 16 GB** with one-command fallback to **CX32 8 GB**; positioning **person-lookup**.
-- **First action to pick tomorrow:** **P14 — entitlement gate + payment STUB** (wire the seam early, keep it OPEN so testing never blocks). ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core**, ✅ **P13**, ✅ **P8f-2/Hudson Rock**, and ✅ **P12 — search orchestration** (the fan-out product layer) are **done and merged to `main`** (through 2026-07-17). Remaining after P14: P10 (observability polish), P9-pub (pre-deploy hardening), then [P11 deploy — deferred] and P15 (real payments — last).
+- **First action to pick tomorrow:** **P10 — observability polish** (OTLP exporter + Prometheus metrics + orchestration trace ids). ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core**, ✅ **P13**, ✅ **P8f-2/Hudson Rock**, ✅ **P12 — search orchestration**, and ✅ **P14 — entitlement gate + payment stub** are **done and merged to `main`** (through 2026-07-17). Remaining: P10 (observability), P9-pub (pre-deploy hardening), then [P11 deploy — deferred] and P15 (real payments — last). **Also spike-deferred:** P8f-2 user-scanner (needs a Docker/Python lane).
 - **Full working artifacts** from the planning session (free-libs research matrices, the raw plan-v3, the fix-lists) live in the session scratchpad — ask if you want them copied into `docs/research/`.
 
 ---
@@ -116,7 +116,7 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 | ✅ | **P13** | Ops cockpit: Bull-Board (`/admin/queues`, Basic auth) + `/api/admin` JSON status/config + D2 toggles (enable/disable, breaker-reset) — *done, merged 2026-07-17* | S–M | P9b-core | #2, D2, D3 |
 | 🟡 | **P8f-2** | Providers (lean): ✅ **Hudson Rock** (Node HTTP, keyless) done+merged 2026-07-17; **user-scanner spike-deferred** (undocumented CLI JSON export ⇒ needs a Docker/Python integration spike) | S | P9a, P9b-core | #4 |
 | ✅ | **P12** | Search orchestration (`searches` table + fan-out + merged report + cascade-cancel) — *done, merged 2026-07-17* | M–L | P9b-core, P8f-2, P13 | #1 |
-| 7 | **P14** | Entitlement gate (public entrypoints only) + payment **STUB** (bypass open) | S–M | P12 | #1 |
+| ✅ | **P14** | Entitlement gate (public POST entrypoints only) + payment **STUB** (bypass open) — *done, merged 2026-07-17* | S–M | P12 | #1 |
 | 8 | **P10** | Observability polish | S | P9b-core, P12, P13 | #2 |
 | 9 | **P9-pub** | Public hardening (per-IP throttle, backpressure, cost-cap enforce, Turnstile) — pre-deploy | M | P9b-core | #2 |
 | 10 | **P11** | Deployment (incl. 16→8 GB rollback doc) | — | ALL | *(DEFERRED)* |
@@ -216,7 +216,9 @@ P9b-core → P9-pub → P11 → P15
 **DoD:** `POST /api/search {identifier:"someuser"}` fans out, streams partials on `search:events:<id>`, ends with a merged deduped report; a down provider ⇒ partial (not failure); `DELETE` while a child is `waiting` ⇒ that child never enters `process()`; fan-out peak RSS under the §3 numbers. `pnpm check` green.
 
 ### P14 · Entitlement gate (public entrypoints only) + payment STUB — `req #1`
-**Goal:** wire the payment seam early but keep it OPEN so P15 is a config flip; gate **only** public entrypoints so orchestration children never double-gate.
+> **Status (2026-07-17): DONE + merged.** `apps/api/src/entitlement/` — `EntitlementService.assertEntitled()` (no-op when `PAYMENTS_ENABLED=false`; else reads the reserved `payments` schema via `repositories.payments.hasSucceededPayment` — empty until P15 → 402) + `EntitlementGuard` (`@Global` EntitlementModule) applied via `@UseGuards` to **only** `POST /api/lookups` and `POST /api/search` (NOT stream/GET/DELETE, NOT orchestration children — they use the ungated internal `repositories.lookups.create` path, so a child under a paid parent still runs). `PAYMENTS_ENABLED` env (`z.enum(["true","false"]).transform`, default `false` — avoids the `z.coerce.boolean()` "false"-is-truthy trap). `paidAt` stamped after create in both public services (`lookups.markPaid` / `searches.markPaid`; added a `searches.paid_at` column + migration); `lookups.paid_at` already existed. Surfaced in `/api/admin/config`. Entitlement unit-tested both modes; `pnpm check` green (262 tests). Reviewed: **APPROVE**, no critical/high. **P15 handoff caveat:** in the open period every row carries `paidAt = now()` without a real payment behind it — P15's per-user entitlement must not treat those historical stamps as payment evidence. **Docker absent ⇒ the live 402/allow round-trip not exercised** (unit-tested instead).
+>
+> **Goal:** wire the payment seam early but keep it OPEN so P15 is a config flip; gate **only** public entrypoints so orchestration children never double-gate.
 **Tasks:**
 1. `apps/api/src/entitlement/` `EntitlementService` + guard on **`POST /api/lookups`** and **`POST /api/search`** — NOT on `LookupsService.enqueue`. Add `enqueueInternal()` (no gate) for P12 children.
 2. `PAYMENTS_ENABLED` env (default `false`) ⇒ always-allowed + **explicit `paidAt` write** (`repositories.lookups.markPaid`; `create()` doesn't stamp it today); `=true` ⇒ require a paid entitlement (402 when absent).
@@ -283,6 +285,7 @@ Pick one (first two phases are independent):
 - ✅ **`P13` — done, merged 2026-07-17.** Ops cockpit: Bull-Board + `/api/admin` JSON + D2 toggles.
 - 🟡 **`P8f-2` — Hudson Rock done, merged 2026-07-17.** user-scanner spike-deferred (undocumented CLI JSON export — see the P8f-2 detail).
 - ✅ **`P12` — done, merged 2026-07-17.** Search orchestration: fan-out + merged report + cascade-cancel.
-- **`P14` — next.** Entitlement gate on the two public entrypoints + payment STUB (bypass open).
+- ✅ **`P14` — done, merged 2026-07-17.** Entitlement gate on the two public POST entrypoints + payment stub (bypass open).
+- **`P10` — next.** Observability polish (OTLP exporter + Prometheus metrics + orchestration trace ids).
 
 Each phase = a new branch `phase/<id>-<slug>` + a draft PR, `pnpm check` green at the end, owner merges. Say which one and I'll open the branch and start.
