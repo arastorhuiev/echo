@@ -38,6 +38,22 @@ curl -N http://localhost:3000/api/lookups/$LOOKUP_ID/stream
 - `pnpm test:int` — integration tests (Testcontainers — Docker must be running).
 - `docker compose down -v` — nuke local state (Postgres + Redis volumes deleted).
 
+### Migrations (Drizzle — forward-only)
+Drizzle migrations are **forward-only**: `drizzle-kit generate` emits an
+`up` migration but no `down`. To roll back a schema change you write the
+inverse SQL by hand (or restore from a backup). Relevant to **P12** — the
+`searches` table + `lookups.search_id` FK (migration
+`…_add_searches_orchestration`). Manual rollback:
+```sql
+ALTER TABLE lookups DROP CONSTRAINT IF EXISTS lookups_search_id_searches_id_fkey;
+ALTER TABLE lookups DROP COLUMN IF EXISTS search_id;
+DROP TABLE IF EXISTS searches;
+DROP TYPE IF EXISTS search_status;
+DROP TYPE IF EXISTS search_kind;
+```
+`search_id` is `ON DELETE CASCADE`, so deleting a `searches` row also
+deletes its child lookups — intended (a search owns its children).
+
 ## Production deployment
 
 *To be populated in P11.* Skeleton:

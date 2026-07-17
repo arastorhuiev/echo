@@ -44,6 +44,7 @@ import { HealthModule } from "@/health/health.module"
 import { LookupsModule } from "@/lookups/lookups.module"
 import { MetricsController } from "@/metrics/metrics.controller"
 import { ProvidersModule } from "@/providers-meta/providers.module"
+import { SearchModule } from "@/search/search.module"
 
 const isProd = process.env.NODE_ENV === "production"
 
@@ -144,6 +145,8 @@ const isProd = process.env.NODE_ENV === "production"
     HealthModule,
     LookupsModule,
     ProvidersModule,
+    // Search orchestration — /api/search fan-out (P12)
+    SearchModule,
     // Ops cockpit — /admin JSON API (P13)
     AdminModule,
     // Prometheus registry (global module from @echo/observability)

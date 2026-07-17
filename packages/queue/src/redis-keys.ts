@@ -3,6 +3,21 @@ export function lookupEventsKey(lookupId: string): string {
   return `lookup:events:${lookupId}`
 }
 
+/** Redis Stream key carrying the aggregated event fan-out for one search (P12). */
+export function searchEventsKey(searchId: string): string {
+  return `search:events:${searchId}`
+}
+
+/**
+ * Persisted cancel flag for an orchestrated search (P12). Set by the api on
+ * `DELETE /api/search/:id`; the worker aggregator checks it to stop watching
+ * children and emit a terminal Cancelled. Cascades to each child via the
+ * per-lookup cancel flag/channel.
+ */
+export function searchCancelledKey(searchId: string): string {
+  return `search:cancelled:${searchId}`
+}
+
 /**
  * Redis pub/sub channel where the api publishes a cancel signal for a
  * running lookup. The worker's per-job subscriber listens here and
