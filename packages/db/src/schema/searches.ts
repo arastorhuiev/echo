@@ -27,6 +27,8 @@ export const searches = pgTable(
     status: searchStatus("status").notNull().default("queued"),
     /** Merged, deduped aggregate written by the worker aggregator on completion. */
     report: jsonb("report").$type<unknown>(),
+    /** Paywall stamp (P14) — set when the entitlement gate allowed the search. */
+    paidAt: timestamp("paid_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),

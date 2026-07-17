@@ -58,6 +58,7 @@ services:
       OSINT_PY_URL: ${OSINT_PY_URL:-http://osint-py:8000}
       OTEL_SERVICE_NAME: echo-api
       ADMIN_TOKEN: ${ADMIN_TOKEN:-dev-admin-token-change-me}
+      PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-false}
     depends_on:
       postgres:
         condition: service_healthy

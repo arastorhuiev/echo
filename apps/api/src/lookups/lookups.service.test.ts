@@ -5,7 +5,7 @@ import { z } from "zod"
 
 const { providersRepo, lookupsRepo } = vi.hoisted(() => ({
   providersRepo: { isEnabled: vi.fn() },
-  lookupsRepo: { create: vi.fn() },
+  lookupsRepo: { create: vi.fn(), markPaid: vi.fn() },
 }))
 
 vi.mock("@echo/db", () => ({

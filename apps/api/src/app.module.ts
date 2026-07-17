@@ -40,6 +40,7 @@ import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
 import { AdminModule } from "@/admin/admin.module"
+import { EntitlementModule } from "@/entitlement/entitlement.module"
 import { HealthModule } from "@/health/health.module"
 import { LookupsModule } from "@/lookups/lookups.module"
 import { MetricsController } from "@/metrics/metrics.controller"
@@ -143,6 +144,8 @@ const isProd = process.env.NODE_ENV === "production"
     RedisModule,
     // Feature modules
     HealthModule,
+    // Paywall seam — gates the two public POST entrypoints (P14)
+    EntitlementModule,
     LookupsModule,
     ProvidersModule,
     // Search orchestration — /api/search fan-out (P12)
