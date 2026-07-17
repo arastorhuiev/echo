@@ -14,7 +14,7 @@
 - **What echo is:** a cheap freemium **person-lookup** OSINT aggregator (email / phone / username → an aggregated report about a person), modeled on but undercutting osint.industries / claritycheck. **Not** domain/company recon.
 - **Where we are:** the *engine* is done (P0–P8: 14 providers, SSE streaming, real Redis cache). The *product layers* are not: no guardrails (rate-limit/breaker/single-flight are noop stubs, sidecar has **zero** concurrency caps → a Maigret loop OOMs the box), no aggregation/"search" layer (today 1 lookup = 1 provider), no auth, no payments.
 - **What's locked (owner decisions):** payments **last** (a stub keeps results always testable); a **light ops/admin** surface (Bull-Board + `/admin` JSON, no consumer web); providers **free-only** (no paid APIs) pruned to **user-scanner + Hudson Rock**; hosting **CX42 16 GB** with one-command fallback to **CX32 8 GB**; positioning **person-lookup**.
-- **First action to pick tomorrow:** **P12 — search orchestration** (`searches` table → fan-out to every applicable provider → merged report). ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core**, ✅ **P13 — ops cockpit**, and ✅ **P8f-2/Hudson Rock** (keyless infostealer intel; user-scanner spike-deferred) are **done and merged to `main`** (through 2026-07-17).
+- **First action to pick tomorrow:** **P14 — entitlement gate + payment STUB** (wire the seam early, keep it OPEN so testing never blocks). ✅ **P8f-1**, ✅ **P9a**, ✅ **P9b-core**, ✅ **P13**, ✅ **P8f-2/Hudson Rock**, and ✅ **P12 — search orchestration** (the fan-out product layer) are **done and merged to `main`** (through 2026-07-17). Remaining after P14: P10 (observability polish), P9-pub (pre-deploy hardening), then [P11 deploy — deferred] and P15 (real payments — last).
 - **Full working artifacts** from the planning session (free-libs research matrices, the raw plan-v3, the fix-lists) live in the session scratchpad — ask if you want them copied into `docs/research/`.
 
 ---
@@ -115,7 +115,7 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 | ✅ | **P9b-core** | **done + merged:** 3 wrappers, cancel-while-queued, cost counter, **and per-provider BullMQ queues + routing** (task 1 — imperative-Worker rewrite, 2026-07-17) | M | P9a | #2 |
 | ✅ | **P13** | Ops cockpit: Bull-Board (`/admin/queues`, Basic auth) + `/api/admin` JSON status/config + D2 toggles (enable/disable, breaker-reset) — *done, merged 2026-07-17* | S–M | P9b-core | #2, D2, D3 |
 | 🟡 | **P8f-2** | Providers (lean): ✅ **Hudson Rock** (Node HTTP, keyless) done+merged 2026-07-17; **user-scanner spike-deferred** (undocumented CLI JSON export ⇒ needs a Docker/Python integration spike) | S | P9a, P9b-core | #4 |
-| 6 | **P12** | Search orchestration (`searches` table + cascade-cancel) | M–L | P9b-core, P8f-2, P13 | #1 |
+| ✅ | **P12** | Search orchestration (`searches` table + fan-out + merged report + cascade-cancel) — *done, merged 2026-07-17* | M–L | P9b-core, P8f-2, P13 | #1 |
 | 7 | **P14** | Entitlement gate (public entrypoints only) + payment **STUB** (bypass open) | S–M | P12 | #1 |
 | 8 | **P10** | Observability polish | S | P9b-core, P12, P13 | #2 |
 | 9 | **P9-pub** | Public hardening (per-IP throttle, backpressure, cost-cap enforce, Turnstile) — pre-deploy | M | P9b-core | #2 |
@@ -203,7 +203,9 @@ P9b-core → P9-pub → P11 → P15
 *(Domain/IP category is intentionally left empty — see §2.)*
 
 ### P12 · Search orchestration (`searches` table + cascade-cancel) — `req #1`
-**Goal:** one identifier → fan-out to every applicable provider → merge/dedupe/correlate into a single report. Testable via API/Bruno/admin (no UI).
+> **Status (2026-07-17): DONE + merged.** The actual product layer — one identifier fans out to every applicable provider and returns one merged report. `searches` table + nullable `lookups.search_id` FK (ON DELETE CASCADE, indexed); migration `…_add_searches_orchestration` (forward-only rollback documented in RUNBOOK). `POST /api/search` classifies the identifier (`classify.ts`: email/username/phone/image; other URLs + bare domains ⇒ `domain` = unsupported), resolves applicable providers with correct per-provider query shapes (`applicability.ts`, reliable/core providers only — env-conditional creds excluded), writes a `searches` row + one child `lookups` row per provider (each a real per-provider run, `search_id` set), enqueues the children on the P9b-core per-provider queues, then one aggregator job on `q.search`. The worker **`SearchAggregator`** watches every child's `lookup:events` stream over one blocking connection (cursor `"0"` ⇒ replay-safe, no start-race), forwards `Partial`s tagged with providerId to `search:events:<id>`, and writes the merged/deduped report (`merge.ts` — accounts correlated by normalized URL with contributing providers in `sources`) on a `Final`. `GET /api/search/:id/stream` (SSE) + `DELETE /api/search/:id` cascade-cancel (search flag + per-child flag/remove-waiting/publish; the P9b-core cancel-flag guarantees a `waiting` child never runs). Robustness: a 10-min aggregation deadline (no infinite hang on a dead child); the aggregator emits a terminal on ANY error (SSE never hangs); a partial fan-out failure marks the search failed + emits terminal; a retried child wipes its Redis stream so a fail-then-succeed child isn't misreported (a code-review HIGH we fixed — this also fixes stale-`Failed` replay on the per-lookup SSE). Pure logic (classify/applicability/merge) unit-tested; `pnpm check` green (259 tests). **Docker absent ⇒ the live fan-out / cascade-cancel / aggregation were NOT run** — verify on a Docker lane; unit coverage + the code-review stand in. **Known limitation:** `accounts[]` correlation only populates for username searches (only the site-hunt providers expose `found[].url`); email/phone/image still return per-provider status + the raw data in `lookup_events`.
+>
+> **Goal:** one identifier → fan-out to every applicable provider → merge/dedupe/correlate into a single report. Testable via API/Bruno/admin (no UI).
 **Tasks:**
 1. **Data model:** new `packages/db/src/schema/searches.ts` (id, identifier, kind, status, aggregated `report` jsonb, timestamps) + a nullable `search_id` FK on `lookups` (children stay real per-provider rows, so `provider_id notNull()` holds). **Down-migration note in `RUNBOOK.md`** (Drizzle is forward-only — Principle-5 caveat).
 2. `apps/api/src/search/` — `POST /api/search` classifies the identifier (email/username/phone/image; **`domain` ⇒ `unsupported`**), writes a `searches` row, enqueues child lookups via the internal (ungated) enqueue through the P9b-core queues with bounded concurrency.
@@ -280,6 +282,7 @@ Pick one (first two phases are independent):
 - ✅ **`P9b-core` — done, merged 2026-07-17.** Per-provider BullMQ queues + the 3 wrappers + cost counter + cancel-while-queued fix all complete.
 - ✅ **`P13` — done, merged 2026-07-17.** Ops cockpit: Bull-Board + `/api/admin` JSON + D2 toggles.
 - 🟡 **`P8f-2` — Hudson Rock done, merged 2026-07-17.** user-scanner spike-deferred (undocumented CLI JSON export — see the P8f-2 detail).
-- **`P12` — next.** Search orchestration (`searches` table + fan-out + cascade-cancel).
+- ✅ **`P12` — done, merged 2026-07-17.** Search orchestration: fan-out + merged report + cascade-cancel.
+- **`P14` — next.** Entitlement gate on the two public entrypoints + payment STUB (bypass open).
 
 Each phase = a new branch `phase/<id>-<slug>` + a draft PR, `pnpm check` green at the end, owner merges. Say which one and I'll open the branch and start.
