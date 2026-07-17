@@ -1,4 +1,3 @@
-import type { AppConfigService } from "@echo/config"
 import { repositories } from "@echo/db"
 import type { DbClient } from "@echo/db/client"
 import type { BreakerState } from "@echo/db/schema"
@@ -7,7 +6,6 @@ import { Gauge, MetricsService } from "@echo/observability"
 import { OsintProviderRegistry } from "@echo/providers"
 import { costDay, providerCostKey } from "@echo/queue"
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common"
-import { ConfigService } from "@nestjs/config"
 import type { Redis } from "ioredis"
 import { QueueRouter } from "@/lookups/queue-router"
 
@@ -41,7 +39,6 @@ export class EchoMetricsCollector implements OnModuleInit {
     @Inject(DB_CLIENT) private readonly dbClient: DbClient,
     @Inject(REDIS) private readonly redis: Redis,
     private readonly registry: OsintProviderRegistry,
-    @Inject(ConfigService) private readonly config: AppConfigService,
     private readonly queues: QueueRouter,
     private readonly metrics: MetricsService,
   ) {}
