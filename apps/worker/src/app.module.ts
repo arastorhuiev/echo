@@ -34,7 +34,6 @@ import {
   WHATSMYNAME_PROVIDER,
   WhatsmynameProviderModule,
 } from "@echo/providers"
-import { forRootBullModule } from "@echo/queue"
 import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
@@ -53,9 +52,16 @@ const isProd = process.env.NODE_ENV === "production"
           logLevel: config.get("LOG_LEVEL"),
         }),
     }),
-    forRootBullModule(),
     // Provider registry mirrors the api side — see apps/api/src/app.module.ts
     // for why both sides register the same set.
+    //
+    // LOCKSTEP INVARIANT (P9b-core): the worker's provider set MUST be a
+    // superset of the api's. With per-provider queues, the api enqueues to
+    // `q.<id>` and only the worker's LookupWorkers creates a consuming
+    // Worker; a provider the api can enqueue but the worker lacks would
+    // leave its jobs `waiting` forever (no consumer, no terminal event).
+    // Keep these two arrays identical. (Follow-up: derive both from one
+    // shared list so they cannot drift.)
     OsintProviderRegistryModule.forRootAsync({
       imports: [
         SherlockProviderModule.forRoot(),

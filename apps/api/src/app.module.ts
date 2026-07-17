@@ -34,7 +34,6 @@ import {
   WHATSMYNAME_PROVIDER,
   WhatsmynameProviderModule,
 } from "@echo/providers"
-import { forRootBullModule } from "@echo/queue"
 import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
@@ -58,8 +57,6 @@ const isProd = process.env.NODE_ENV === "production"
           logLevel: config.get("LOG_LEVEL"),
         }),
     }),
-    // BullMQ root — Redis connection shared across every per-provider queue
-    forRootBullModule(),
     // Provider registry — both api and worker register the same set so
     // input validation on the producer side matches what the consumer can run.
     // SherlockProviderModule (imported only here, scoped to the registry)

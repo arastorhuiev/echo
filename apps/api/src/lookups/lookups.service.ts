@@ -7,12 +7,10 @@ import {
   lookupCancelChannel,
   lookupCancelledKey,
   lookupEventsKey,
-  Q_LOOKUP,
 } from "@echo/queue"
-import { InjectQueue } from "@nestjs/bullmq"
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common"
-import type { Queue } from "bullmq"
 import type { Redis } from "ioredis"
+import { QueueRouter } from "@/lookups/queue-router"
 
 /** Cancel flag TTL — long enough to outlive any queued job's wait. */
 const CANCEL_FLAG_TTL_SEC = 60 * 60
@@ -55,7 +53,7 @@ export class LookupsService {
   constructor(
     @Inject(DB_CLIENT) private readonly dbClient: DbClient,
     @Inject(REDIS) private readonly redis: Redis,
-    @InjectQueue(Q_LOOKUP) private readonly queue: Queue,
+    private readonly queues: QueueRouter,
     private readonly registry: OsintProviderRegistry,
   ) {}
 
@@ -97,7 +95,7 @@ export class LookupsService {
       providerId: provider.id,
       query: parsedQuery,
     }
-    await this.queue.add("lookup", jobData, {
+    await this.queues.get(provider.id).add("lookup", jobData, {
       jobId: lookup.id,
       // Per-provider override of the queue-wide attempts default (3).
       // Used by deterministically-failing providers like stub-fail to
@@ -136,7 +134,12 @@ export class LookupsService {
 
     // If the job hasn't started, drop it from the queue so it never occupies
     // a slot, and emit the terminal Cancelled ourselves (the worker won't).
-    const job = await this.queue.getJob(id)
+    // The job lives on its provider's own queue (`q.<providerId>`). If that
+    // provider was de-registered since enqueue, skip straight to the pub/sub
+    // path rather than 500 — the persisted flag already guarantees abort.
+    const job = this.queues.has(lookup.providerId)
+      ? await this.queues.get(lookup.providerId).getJob(id)
+      : undefined
     if (job && REMOVABLE_STATES.has(await job.getState())) {
       try {
         await job.remove()
