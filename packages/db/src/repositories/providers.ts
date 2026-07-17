@@ -62,3 +62,49 @@ export async function findById(db: Db, id: string): Promise<ProviderRow | null> 
   const [row] = await db.select().from(providers).where(eq(providers.id, id)).limit(1)
   return row ?? null
 }
+
+/** Every persisted provider row (only providers that have run / been toggled exist here). */
+export async function list(db: Db): Promise<ProviderRow[]> {
+  return db.select().from(providers).orderBy(providers.id)
+}
+
+/**
+ * Is this provider accepting new work? A provider with no row yet is
+ * enabled by default (rows are created lazily on first run / first toggle),
+ * so absence ⇒ `true`. Used by the enqueue gate (P13 admin toggle).
+ */
+export async function isEnabled(db: Db, id: string): Promise<boolean> {
+  const [row] = await db
+    .select({ enabled: providers.enabled })
+    .from(providers)
+    .where(eq(providers.id, id))
+    .limit(1)
+  return row?.enabled ?? true
+}
+
+/**
+ * Flip a provider's `enabled` flag (admin toggle). Upserts because the row
+ * may not exist yet — a provider that has never run has no `providers` row.
+ */
+export async function setEnabled(db: Db, id: string, enabled: boolean): Promise<void> {
+  await db
+    .insert(providers)
+    .values({ id, enabled })
+    .onConflictDoUpdate({ target: providers.id, set: { enabled } })
+}
+
+/**
+ * Force a provider's breaker back to `closed` (admin "reset stuck breaker").
+ * Upserts and clears `breakerOpenedAt`; success/failure timestamps are
+ * preserved. The worker's in-Redis breaker state machine re-derives from
+ * closed on its next transition.
+ */
+export async function resetBreaker(db: Db, id: string): Promise<void> {
+  await db
+    .insert(providers)
+    .values({ id, breakerState: "closed", breakerOpenedAt: null })
+    .onConflictDoUpdate({
+      target: providers.id,
+      set: { breakerState: "closed", breakerOpenedAt: null },
+    })
+}

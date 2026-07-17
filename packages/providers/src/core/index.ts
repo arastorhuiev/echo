@@ -1,3 +1,4 @@
+export { breakerKeys } from "@/core/breaker-keys.js"
 export { providerResultCacheKey } from "@/core/cache-keys.js"
 export { canonicalizeQuery, queryHash } from "@/core/canonicalize.js"
 export { defaultsFor } from "@/core/defaults.js"

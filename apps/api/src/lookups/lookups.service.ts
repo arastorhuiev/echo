@@ -8,7 +8,13 @@ import {
   lookupCancelledKey,
   lookupEventsKey,
 } from "@echo/queue"
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common"
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common"
 import type { Redis } from "ioredis"
 import { QueueRouter } from "@/lookups/queue-router"
 
@@ -69,6 +75,16 @@ export class LookupsService {
         error: "UnknownProvider",
         providerId: input.providerId,
         knownProviders: this.registry.ids(),
+      })
+    }
+
+    // Admin load-shed gate (P13 D2): a provider disabled via
+    // POST /admin/providers/:id/enabled rejects new work before we write a
+    // row or burn a queue slot. Absence of a row ⇒ enabled (default true).
+    if (!(await repositories.providers.isEnabled(this.dbClient.db, provider.id))) {
+      throw new ServiceUnavailableException({
+        error: "ProviderDisabled",
+        providerId: provider.id,
       })
     }
 

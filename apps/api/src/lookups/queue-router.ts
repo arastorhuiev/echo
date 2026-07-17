@@ -59,6 +59,24 @@ export class QueueRouter implements OnModuleInit, OnModuleDestroy {
     return queue
   }
 
+  /** Every producer queue — used by the Bull-Board mount (P13). */
+  all(): Queue[] {
+    return [...this.queues.values()]
+  }
+
+  /**
+   * Per-provider BullMQ job counts (waiting/active/completed/failed/…) for
+   * the ops cockpit (P13 `/admin/status`). Keyed by providerId.
+   */
+  async jobCounts(): Promise<Record<string, Record<string, number>>> {
+    const entries = await Promise.all(
+      [...this.queues.entries()].map(
+        async ([id, queue]) => [id, await queue.getJobCounts()] as const,
+      ),
+    )
+    return Object.fromEntries(entries)
+  }
+
   async onModuleDestroy(): Promise<void> {
     await Promise.all([...this.queues.values()].map((q) => q.close()))
   }

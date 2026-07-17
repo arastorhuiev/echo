@@ -30,3 +30,12 @@ export function lookupCancelledKey(lookupId: string): string {
 export function providerCostKey(providerId: string, yyyymmdd: string): string {
   return `cost:${providerId}:${yyyymmdd}`
 }
+
+/**
+ * UTC `YYYYMMDD` bucket for the per-provider daily cost counter. Shared so
+ * the worker (which INCRs the counter) and the api ops cockpit (which reads
+ * it) agree on the exact day key.
+ */
+export function costDay(now: Date): string {
+  return now.toISOString().slice(0, 10).replace(/-/g, "")
+}

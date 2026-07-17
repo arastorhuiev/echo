@@ -1,11 +1,15 @@
 import "@/instrumentation"
 import "reflect-metadata"
 import { applyMigrations } from "@echo/db"
+import { ConfigService } from "@nestjs/config"
 import { NestFactory } from "@nestjs/core"
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify"
+import type { FastifyInstance } from "fastify"
 import { Logger } from "nestjs-pino"
 import { ZodValidationPipe } from "nestjs-zod"
+import { mountBullBoard } from "@/admin/bull-board"
 import { AppModule } from "@/app.module"
+import { QueueRouter } from "@/lookups/queue-router"
 import { setupOpenApi } from "@/openapi"
 
 async function bootstrap(): Promise<void> {
@@ -43,6 +47,24 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(new ZodValidationPipe())
   app.enableShutdownHooks()
   setupOpenApi(app)
+
+  // Mount Bull-Board on the raw Fastify instance (P13). init() first so the
+  // QueueRouter has built its per-provider queues; a failed mount logs but
+  // must not stop the API from serving (the dashboard is an ops extra).
+  await app.init()
+  try {
+    const fastify = app.getHttpAdapter().getInstance() as FastifyInstance
+    const queues = app.get(QueueRouter).all()
+    // Use the zod-validated token (non-empty guaranteed), never raw env —
+    // an empty token would make basicAuthValid("", "") accept any password.
+    const adminToken = app.get(ConfigService).getOrThrow<string>("ADMIN_TOKEN")
+    await mountBullBoard(fastify, queues, adminToken)
+    app.get(Logger).log("Bull-Board mounted at /admin/queues")
+  } catch (err) {
+    app
+      .get(Logger)
+      .error(`Bull-Board mount failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
 
   const port = Number(process.env.PORT ?? 3000)
   await app.listen(port, "0.0.0.0")

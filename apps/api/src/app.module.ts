@@ -37,6 +37,7 @@ import {
 import { Module } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
+import { AdminModule } from "@/admin/admin.module"
 import { HealthModule } from "@/health/health.module"
 import { LookupsModule } from "@/lookups/lookups.module"
 import { MetricsController } from "@/metrics/metrics.controller"
@@ -137,6 +138,8 @@ const isProd = process.env.NODE_ENV === "production"
     HealthModule,
     LookupsModule,
     ProvidersModule,
+    // Ops cockpit — /admin JSON API (P13)
+    AdminModule,
     // Prometheus registry (global module from @echo/observability)
     MetricsModule,
   ],
