@@ -43,6 +43,7 @@ import { AdminModule } from "@/admin/admin.module"
 import { EntitlementModule } from "@/entitlement/entitlement.module"
 import { HealthModule } from "@/health/health.module"
 import { LookupsModule } from "@/lookups/lookups.module"
+import { EchoMetricsCollector } from "@/metrics/echo-metrics.collector"
 import { MetricsController } from "@/metrics/metrics.controller"
 import { ProvidersModule } from "@/providers-meta/providers.module"
 import { SearchModule } from "@/search/search.module"
@@ -156,5 +157,7 @@ const isProd = process.env.NODE_ENV === "production"
     MetricsModule,
   ],
   controllers: [MetricsController],
+  // Registers echo's custom Prometheus gauges on the shared registry (P10).
+  providers: [EchoMetricsCollector],
 })
 export class AppModule {}
