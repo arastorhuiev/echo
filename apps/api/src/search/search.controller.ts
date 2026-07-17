@@ -19,6 +19,7 @@ import type { FastifyReply, FastifyRequest } from "fastify"
 import { createZodDto } from "nestjs-zod"
 import { z } from "zod"
 import { EntitlementGuard } from "@/entitlement/entitlement.guard"
+import { PublicHardeningGuard } from "@/hardening/public-hardening.guard"
 import {
   type CancelSearchResult,
   type CreateSearchResult,
@@ -54,7 +55,7 @@ export class SearchController {
   ) {}
 
   @Post()
-  @UseGuards(EntitlementGuard)
+  @UseGuards(PublicHardeningGuard, EntitlementGuard)
   create(@Body() body: CreateSearchDto, @Ip() ipAddress: string): Promise<CreateSearchResult> {
     return this.service.createSearch({ identifier: body.identifier, ipAddress })
   }

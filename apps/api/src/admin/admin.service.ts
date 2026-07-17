@@ -63,6 +63,10 @@ export class AdminService {
         METRICS_ALLOWLIST: this.config.get("METRICS_ALLOWLIST") ?? null,
         COST_DAILY_WARN: this.config.get("COST_DAILY_WARN"),
         PAYMENTS_ENABLED: this.config.get("PAYMENTS_ENABLED"),
+        RATE_LIMIT_PER_MINUTE: this.config.get("RATE_LIMIT_PER_MINUTE"),
+        QUEUE_BACKPRESSURE_MAX: this.config.get("QUEUE_BACKPRESSURE_MAX"),
+        COST_DAILY_CAP: this.config.get("COST_DAILY_CAP"),
+        TURNSTILE_ENABLED: Boolean(this.config.get("TURNSTILE_SECRET")),
       },
       // DATABASE_URL / REDIS_URL / ADMIN_TOKEN are secrets — never exposed.
       providers: await this.providerSnapshots(),

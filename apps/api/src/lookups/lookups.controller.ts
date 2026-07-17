@@ -19,6 +19,7 @@ import type { FastifyReply, FastifyRequest } from "fastify"
 import { createZodDto } from "nestjs-zod"
 import { z } from "zod"
 import { EntitlementGuard } from "@/entitlement/entitlement.guard"
+import { PublicHardeningGuard } from "@/hardening/public-hardening.guard"
 import {
   type CancelLookupResult,
   type EnqueueLookupResult,
@@ -60,7 +61,7 @@ export class LookupsController {
    * and `query` against the provider's inputSchema.
    */
   @Post()
-  @UseGuards(EntitlementGuard)
+  @UseGuards(PublicHardeningGuard, EntitlementGuard)
   create(@Body() body: CreateLookupDto, @Ip() ipAddress: string): Promise<EnqueueLookupResult> {
     return this.service.enqueue({
       providerId: body.providerId,

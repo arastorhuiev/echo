@@ -41,6 +41,7 @@ import { ConfigService } from "@nestjs/config"
 import { LoggerModule as PinoLoggerModule } from "nestjs-pino"
 import { AdminModule } from "@/admin/admin.module"
 import { EntitlementModule } from "@/entitlement/entitlement.module"
+import { HardeningModule } from "@/hardening/hardening.module"
 import { HealthModule } from "@/health/health.module"
 import { LookupsModule } from "@/lookups/lookups.module"
 import { EchoMetricsCollector } from "@/metrics/echo-metrics.collector"
@@ -147,6 +148,8 @@ const isProd = process.env.NODE_ENV === "production"
     HealthModule,
     // Paywall seam — gates the two public POST entrypoints (P14)
     EntitlementModule,
+    // Exposure-only public hardening — throttle/backpressure/cost-cap (P9-pub)
+    HardeningModule,
     LookupsModule,
     ProvidersModule,
     // Search orchestration — /api/search fan-out (P12)

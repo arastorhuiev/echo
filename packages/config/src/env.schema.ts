@@ -50,6 +50,21 @@ export const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
+
+  // Public hardening (P9-pub, pre-deploy exposure-only). All DEFAULT-OFF so
+  // local dev + CI are never throttled; production sets the real values just
+  // before P11. A `0` / empty value disables that check entirely.
+  //
+  // Per-IP fixed-window rate limit on the public POST routes (req / 60 s).
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().nonnegative().default(0),
+  // Reject a public POST with 503 when total waiting jobs exceed this.
+  QUEUE_BACKPRESSURE_MAX: z.coerce.number().int().nonnegative().default(0),
+  // Reject a public POST with 503 when today's total run-count exceeds this
+  // (hard cap; the soft warn is COST_DAILY_WARN).
+  COST_DAILY_CAP: z.coerce.number().int().nonnegative().default(0),
+  // Cloudflare Turnstile secret — when set, the public POST routes require a
+  // valid Turnstile token. Empty (default) ⇒ Turnstile is off.
+  TURNSTILE_SECRET: z.string().optional(),
 })
 
 export type EnvSchema = z.infer<typeof envSchema>
