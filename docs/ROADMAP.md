@@ -117,7 +117,7 @@ Execution order ≠ numeric label order (P10/P11 keep their historical numbers; 
 | 🟡 | **P8f-2** | Providers (lean): ✅ **Hudson Rock** (Node HTTP, keyless) done+merged 2026-07-17; **user-scanner spike-deferred** (undocumented CLI JSON export ⇒ needs a Docker/Python integration spike) | S | P9a, P9b-core | #4 |
 | ✅ | **P12** | Search orchestration (`searches` table + fan-out + merged report + cascade-cancel) — *done, merged 2026-07-17* | M–L | P9b-core, P8f-2, P13 | #1 |
 | ✅ | **P14** | Entitlement gate (public POST entrypoints only) + payment **STUB** (bypass open) — *done, merged 2026-07-17* | S–M | P12 | #1 |
-| 8 | **P10** | Observability polish | S | P9b-core, P12, P13 | #2 |
+| 🟡 | **P10** | Observability polish — ✅ OTLP export (already wired) + named Prometheus gauges (queue/breaker/cost) on `/api/metrics`; worker per-run counters + custom parent/child spans = follow-up (needs a worker metrics endpoint) | S | P9b-core, P12, P13 | #2 |
 | 9 | **P9-pub** | Public hardening (per-IP throttle, backpressure, cost-cap enforce, Turnstile) — pre-deploy | M | P9b-core | #2 |
 | 10 | **P11** | Deployment (incl. 16→8 GB rollback doc) | — | ALL | *(DEFERRED)* |
 | 11 | **P15** | Real payments (**LAST**) | M | P14, P11 | #1 |
@@ -226,7 +226,9 @@ P9b-core → P9-pub → P11 → P15
 **DoD:** default env ⇒ every lookup + search completes with `paidAt` set; `PAYMENTS_ENABLED=true` + no entitlement ⇒ 402 at the two public routes only; a child under a paid parent still runs. `pnpm check` green.
 
 ### P10 · Observability polish — `req #2`
-OTLP exporter via env; custom spans (provider runs, cache hit/miss, breaker decisions, orchestration parent/child sharing a trace id); Prometheus `echo_provider_runs_total` / `_run_duration_ms` / `echo_queue_waiting|active` / `echo_breaker_state` / `echo_cache_lookups_total` / `echo_cost_*`; optional Grafana JSON. **DoD:** metrics at `/api/metrics`; orchestration trace shows parent+child spans; `/admin/status` reads the same signals.
+> **Status (2026-07-17): PARTIAL + merged.** ✅ **OTLP trace export** was already wired (`@echo/observability/instrumentation`, env-gated on `OTEL_EXPORTER_OTLP_ENDPOINT`). ✅ **Named Prometheus gauges** — `EchoMetricsCollector` (`apps/api/src/metrics/echo-metrics.collector.ts`) registers `echo_queue_waiting` / `echo_queue_active` (per provider), `echo_breaker_state` (0/1/2), and `echo_cost_total` on the shared registry as **pull** gauges whose `collect()` reads the SAME live sources `/api/admin/status` uses (QueueRouter / DB / Redis) — so the DoD's "`/admin/status` reads the same signals" holds and cross-process signals need no worker HTTP endpoint. prom-client primitives re-exported from `@echo/observability`. Scrape output unit-tested. `pnpm check` green (264 tests). **Follow-up (deferred):** worker-side per-run counters (`echo_provider_runs_total` / `_run_duration_ms`, `echo_cache_lookups_total`) + custom parent/child orchestration spans sharing a trace id — these are worker-process events and need a worker metrics endpoint (or a Redis-backed counter the api collector reads); the pull gauges cover the operational signals meanwhile.
+>
+> OTLP exporter via env; custom spans (provider runs, cache hit/miss, breaker decisions, orchestration parent/child sharing a trace id); Prometheus `echo_provider_runs_total` / `_run_duration_ms` / `echo_queue_waiting|active` / `echo_breaker_state` / `echo_cache_lookups_total` / `echo_cost_*`; optional Grafana JSON. **DoD:** metrics at `/api/metrics`; orchestration trace shows parent+child spans; `/admin/status` reads the same signals.
 
 ### P9-pub · Public hardening (pre-deploy, exposure-only) — `req #2`
 Only needed right before P11. Global `@nestjs/throttler` (Redis, `10 req/60 s`/IP on `/api/lookups` + `/api/search`); backpressure (queue `waitingCount > QUEUE_BACKPRESSURE_MAX=200` ⇒ 503 `Retry-After`); **cost-cap enforcement** (`cost:*` over `COST_DAILY_CAP=1000` ⇒ 503); Cloudflare Turnstile scaffold (env-off by default). **Breaker persistence is NOT here — it moved to P9b-core.** **DoD:** `10 req/60 s` ⇒ 429; queue `>200` ⇒ 503; cost over cap ⇒ 503; all off/default-safe locally.
@@ -286,6 +288,7 @@ Pick one (first two phases are independent):
 - 🟡 **`P8f-2` — Hudson Rock done, merged 2026-07-17.** user-scanner spike-deferred (undocumented CLI JSON export — see the P8f-2 detail).
 - ✅ **`P12` — done, merged 2026-07-17.** Search orchestration: fan-out + merged report + cascade-cancel.
 - ✅ **`P14` — done, merged 2026-07-17.** Entitlement gate on the two public POST entrypoints + payment stub (bypass open).
-- **`P10` — next.** Observability polish (OTLP exporter + Prometheus metrics + orchestration trace ids).
+- 🟡 **`P10` — metrics done, merged 2026-07-17.** Named Prometheus gauges + OTLP; worker per-run spans/counters are a follow-up.
+- **`P9-pub` — next (pre-deploy only).** Per-IP throttle + backpressure + cost-cap enforce + Turnstile scaffold. Earns nothing until P11 (deploy) is greenlit.
 
 Each phase = a new branch `phase/<id>-<slug>` + a draft PR, `pnpm check` green at the end, owner merges. Say which one and I'll open the branch and start.
